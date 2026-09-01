@@ -148,6 +148,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const CALCULATOR_KEY = "kbjv_calculator";
   const ARCHIVE_KEY = "kbjv_archive";
 
+  /* =========================================================
+     PERSISTENT UI STATE
+  ========================================================= */
+
+  const ACTIVE_TAB_KEY = "kbjv_active_tab";
+  const CALCULATOR_DRAFT_KEY = "kbjv_calculator_draft";
+
 
   /* =========================================================
      DEFAULT PRODUCTS
@@ -522,6 +529,108 @@ document.addEventListener("DOMContentLoaded", () => {
         ""
       ).trim()
     };
+  }
+
+
+  /* =========================================================
+     PERSISTENT UI STATE
+  ========================================================= */
+
+  function saveActiveTab(tabName) {
+    try {
+      localStorage.setItem(
+        ACTIVE_TAB_KEY,
+        tabName
+      );
+    } catch (error) {
+      console.error(
+        "Помилка збереження активної вкладки:",
+        error
+      );
+    }
+  }
+
+
+  function loadActiveTab() {
+    try {
+      const savedTab =
+        localStorage.getItem(
+          ACTIVE_TAB_KEY
+        );
+
+      if (
+        savedTab === "blocks" ||
+        savedTab === "calculator" ||
+        savedTab === "archive"
+      ) {
+        return savedTab;
+      }
+
+      return "blocks";
+    } catch (error) {
+      console.error(
+        "Помилка читання активної вкладки:",
+        error
+      );
+
+      return "blocks";
+    }
+  }
+
+
+  function saveCalculatorDraft() {
+    if (!calcInput) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(
+        CALCULATOR_DRAFT_KEY,
+        calcInput.value
+      );
+    } catch (error) {
+      console.error(
+        "Помилка збереження чернетки калькулятора:",
+        error
+      );
+    }
+  }
+
+
+  function loadCalculatorDraft() {
+    if (!calcInput) {
+      return;
+    }
+
+    try {
+      const draft =
+        localStorage.getItem(
+          CALCULATOR_DRAFT_KEY
+        );
+
+      if (draft !== null) {
+        calcInput.value = draft;
+      }
+    } catch (error) {
+      console.error(
+        "Помилка читання чернетки калькулятора:",
+        error
+      );
+    }
+  }
+
+
+  function clearCalculatorDraft() {
+    try {
+      localStorage.removeItem(
+        CALCULATOR_DRAFT_KEY
+      );
+    } catch (error) {
+      console.error(
+        "Помилка очищення чернетки калькулятора:",
+        error
+      );
+    }
   }
 
 
@@ -1033,6 +1142,12 @@ document.addEventListener("DOMContentLoaded", () => {
       if (targetPage) {
         targetPage.classList.add("active");
       }
+
+      /* =====================================================
+         ЗБЕРІГАЄМО АКТИВНУ ВКЛАДКУ
+      ===================================================== */
+
+      saveActiveTab(target);
 
       if (target === "archive") {
         renderArchive();
@@ -1602,7 +1717,7 @@ document.addEventListener("DOMContentLoaded", () => {
          *
          * Яйця...
          * Молоко...
-         *
+         * 
          * тобто автоматично з нового рядка.
          */
         if (calcInput) {
@@ -1613,6 +1728,12 @@ document.addEventListener("DOMContentLoaded", () => {
             currentText
               ? `${currentText}\n${text}`
               : text;
+
+          /*
+           * Зберігаємо поточну чернетку,
+           * щоб вона не пропала після оновлення.
+           */
+          saveCalculatorDraft();
 
           /*
            * Ставимо курсор у кінець поля.
@@ -2703,6 +2824,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   /* =========================================================
+     CALCULATOR DRAFT AUTOSAVE
+  ========================================================= */
+
+  if (calcInput) {
+    calcInput.addEventListener(
+      "input",
+      () => {
+        saveCalculatorDraft();
+      }
+    );
+  }
+
+
+  /* =========================================================
      CALCULATOR ADD
   ========================================================= */
 
@@ -2785,6 +2920,12 @@ document.addEventListener("DOMContentLoaded", () => {
          */
         calcInput.value = "";
 
+        /*
+         * Очищаємо збережену чернетку,
+         * бо текст уже доданий у підсумок.
+         */
+        clearCalculatorDraft();
+
 
         showButtonState(
           calcAdd,
@@ -2823,6 +2964,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         calcInput.value = "";
+
+        /*
+         * Видаляємо чернетку після очищення поля.
+         */
+        clearCalculatorDraft();
+
 
         showButtonState(
           calcClearText,
@@ -3816,10 +3963,47 @@ document.addEventListener("DOMContentLoaded", () => {
   archiveItems =
     loadArchiveLocal();
 
+  /*
+   * Відновлюємо незавершений текст
+   * у калькуляторі до першого рендера.
+   */
+  loadCalculatorDraft();
+
 
   renderCalculatorLog();
   updateTotals();
   renderArchive();
+
+
+  /*
+   * Відновлюємо саме ту вкладку,
+   * на якій користувач був перед оновленням.
+   */
+  const savedActiveTab =
+    loadActiveTab();
+
+  tabs.forEach(tab => {
+    tab.classList.toggle(
+      "active",
+      tab.dataset.tab === savedActiveTab
+    );
+  });
+
+  pages.forEach(page => {
+    page.classList.toggle(
+      "active",
+      page.id === savedActiveTab
+    );
+  });
+
+  if (savedActiveTab === "archive") {
+    renderArchive();
+  }
+
+  if (savedActiveTab === "calculator") {
+    renderCalculatorLog();
+    updateTotals();
+  }
 
 
   initializeProducts();
