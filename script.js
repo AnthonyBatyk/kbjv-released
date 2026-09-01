@@ -3048,7 +3048,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         showButtonState(
           calcSection,
-          "Додано ✓",
+          "Додано",
           "success",
           1500
         );
