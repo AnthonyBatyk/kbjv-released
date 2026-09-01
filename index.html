@@ -91,10 +91,7 @@
               Видалити продукт
             </button>
 
-            <button
-              id="reorder-products"
-              class="reorder-product-button"
-            >
+            <button id="reorder-products" class="reorder-product-button">
               Змінити розташування продукту
             </button>
 
@@ -103,31 +100,19 @@
 
           <!-- ================= SEARCH ================= -->
 
-          <div
-            class="search-container"
-            style="margin-top: 18px;"
-          >
+          <div class="search-container" style="margin-top: 18px;">
 
             <div class="search-wrapper">
 
-              <input
-                type="text"
-                id="search"
-                placeholder="Пошук продукту..."
-              >
+              <input type="text" id="search" placeholder="Пошук продукту...">
 
               <span id="clear-search">✕</span>
 
             </div>
 
           </div>
-          
-          <input
-            type="file"
-            id="import-file"
-            accept=".json,application/json"
-            hidden
-          >
+
+          <input type="file" id="import-file" accept=".json,application/json" hidden>
 
         </header>
 
@@ -183,11 +168,8 @@
 
           <div class="paste-box">
 
-            <textarea
-              id="calc-input"
-              placeholder="Вставте сюди:
-Продукт, для ### грам - ### ккал / ### білка / ### жирів / ### вуглеводів"
-            ></textarea>
+            <textarea id="calc-input" placeholder="Вставте сюди:
+Продукт, для ### грам - ### ккал / ### білка / ### жирів / ### вуглеводів"></textarea>
 
             <div class="buttons">
 
@@ -334,10 +316,7 @@
   <!--              PRODUCT ACTION MODAL                 -->
   <!-- ================================================= -->
 
-  <div
-    id="product-modal"
-    class="product-modal"
-  >
+  <div id="product-modal" class="product-modal">
 
     <div class="product-modal-box">
 
@@ -356,38 +335,22 @@
           Введіть вагу продукту у грамах:
         </label>
 
-        <input
-          type="number"
-          id="product-weight"
-          min="0.1"
-          step="0.1"
-          value="100"
-        >
+        <input type="number" id="product-weight" min="0.1" step="0.1" value="100">
 
       </div>
 
 
       <div class="product-modal-actions">
 
-        <button
-          type="button"
-          id="product-cancel"
-          class="product-action-cancel"
-        >
+        <button type="button" id="product-cancel" class="product-action-cancel">
           Скасувати
         </button>
 
-        <button
-          type="button"
-          id="product-copy"
-        >
+        <button type="button" id="product-copy">
           Скопіювати
         </button>
 
-        <button
-          type="button"
-          id="product-calculator"
-        >
+        <button type="button" id="product-calculator">
           В калькулятор
         </button>
 
@@ -402,10 +365,7 @@
   <!--              ADD PRODUCT MODAL                    -->
   <!-- ================================================= -->
 
-  <div
-    id="add-product-modal"
-    class="product-modal"
-  >
+  <div id="add-product-modal" class="product-modal">
 
     <div class="product-modal-box add-product-modal-box">
 
@@ -422,11 +382,7 @@
             Назва продукту:
           </label>
 
-          <input
-            type="text"
-            id="new-product-name"
-            placeholder="Уведіть назву продукту..."
-          >
+          <input type="text" id="new-product-name" placeholder="Уведіть назву продукту...">
 
         </div>
 
@@ -437,13 +393,7 @@
             Калорії на 100 г:
           </label>
 
-          <input
-            type="number"
-            id="new-product-kcal"
-            min="0"
-            step="0.1"
-            placeholder="0"
-          >
+          <input type="number" id="new-product-kcal" min="0" step="0.1" placeholder="0">
 
         </div>
 
@@ -454,13 +404,7 @@
             Білок на 100 г:
           </label>
 
-          <input
-            type="number"
-            id="new-product-protein"
-            min="0"
-            step="0.1"
-            placeholder="0"
-          >
+          <input type="number" id="new-product-protein" min="0" step="0.1" placeholder="0">
 
         </div>
 
@@ -471,13 +415,7 @@
             Жири на 100 г:
           </label>
 
-          <input
-            type="number"
-            id="new-product-fat"
-            min="0"
-            step="0.1"
-            placeholder="0"
-          >
+          <input type="number" id="new-product-fat" min="0" step="0.1" placeholder="0">
 
         </div>
 
@@ -488,13 +426,7 @@
             Вуглеводи на 100 г:
           </label>
 
-          <input
-            type="number"
-            id="new-product-carb"
-            min="0"
-            step="0.1"
-            placeholder="0"
-          >
+          <input type="number" id="new-product-carb" min="0" step="0.1" placeholder="0">
 
         </div>
 
@@ -505,10 +437,7 @@
             Опис продукту:
           </label>
 
-          <textarea
-            id="new-product-description"
-            placeholder="Уведіть опис продукту..."
-          ></textarea>
+          <textarea id="new-product-description" placeholder="Уведіть опис продукту..."></textarea>
 
         </div>
 
@@ -517,18 +446,11 @@
 
       <div class="product-modal-actions">
 
-        <button
-          type="button"
-          id="add-product-cancel"
-          class="product-action-cancel"
-        >
+        <button type="button" id="add-product-cancel" class="product-action-cancel">
           Скасувати
         </button>
 
-        <button
-          type="button"
-          id="add-product-save"
-        >
+        <button type="button" id="add-product-save">
           Зберегти
         </button>
 
@@ -543,10 +465,7 @@
   <!--              DELETE PRODUCT MODAL                 -->
   <!-- ================================================= -->
 
-  <div
-    id="delete-product-modal"
-    class="product-modal"
-  >
+  <div id="delete-product-modal" class="product-modal">
 
     <div class="product-modal-box delete-product-modal-box">
 
@@ -556,30 +475,19 @@
 
       <div class="product-modal-actions">
 
-        <button
-          type="button"
-          id="delete-product-cancel"
-          class="product-action-cancel"
-        >
+        <button type="button" id="delete-product-cancel-top" class="product-action-cancel">
           Скасувати
         </button>
 
       </div>
 
 
-      <div
-        id="delete-product-list"
-        class="delete-product-list"
-      ></div>
+      <div id="delete-product-list" class="delete-product-list"></div>
 
 
       <div class="product-modal-actions">
 
-        <button
-          type="button"
-          id="delete-product-cancel"
-          class="product-action-cancel"
-        >
+        <button type="button" id="delete-product-cancel-bottom" class="product-action-cancel">
           Скасувати
         </button>
 
@@ -594,10 +502,7 @@
   <!--                  TEXT EDIT MODAL                  -->
   <!-- ================================================= -->
 
-  <div
-    id="archive-text-modal"
-    class="product-modal"
-  >
+  <div id="archive-text-modal" class="product-modal">
 
     <div class="product-modal-box archive-text-modal-box">
 
@@ -612,28 +517,18 @@
           Текст денного підсумку:
         </label>
 
-        <textarea
-          id="archive-text-input"
-          class="archive-text-input"
-        ></textarea>
+        <textarea id="archive-text-input" class="archive-text-input"></textarea>
 
       </div>
 
 
       <div class="product-modal-actions">
 
-        <button
-          type="button"
-          id="archive-text-cancel"
-          class="product-action-cancel"
-        >
+        <button type="button" id="archive-text-cancel" class="product-action-cancel">
           Скасувати
         </button>
 
-        <button
-          type="button"
-          id="archive-text-save"
-        >
+        <button type="button" id="archive-text-save">
           Зберегти
         </button>
 
