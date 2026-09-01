@@ -151,32 +151,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* =========================================================
      DEFAULT PRODUCTS
+     
+     ВАЖЛИВО:
+     Автоматичних продуктів більше НЕМАЄ.
+     
+     При першому запуску база продуктів буде порожньою.
+     Продукти з'являться тільки після:
+     - імпорту JSON;
+     - ручного додавання;
+     - завантаження вже існуючих продуктів із Supabase.
   ========================================================= */
 
-  const DEFAULT_PRODUCTS = [
-    {
-      id: "local-eggs",
-      name: "Яйця",
-      kcal: 155,
-      protein: 12,
-      fat: 10.2,
-      carb: 0.8,
-      unit: "г",
-      full_name: "Яйця aro курячі харчові столові L C0"
-    },
-
-    {
-      id: "local-heineken",
-      name: "Пиво Heineken",
-      kcal: 42,
-      protein: 0,
-      fat: 0,
-      carb: 3.2,
-      unit: "мл",
-      full_name:
-        "Пиво Heineken світле нефільтроване пастеризоване, напій алкогольний, вміст спирту 5%"
-    }
-  ];
+  const DEFAULT_PRODUCTS = [];
 
 
   /* =========================================================
@@ -937,6 +923,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* =========================================================
      INITIAL DATABASE LOAD
+     
+     НІЯКИХ DEFAULT PRODUCTS.
+     
+     Якщо локальна база порожня:
+       products = []
+     
+     Якщо Supabase порожній:
+       products залишається []
+     
+     Тобто сайт не створює жодного продукту самостійно.
   ========================================================= */
 
   async function initializeProducts() {
@@ -944,10 +940,7 @@ document.addEventListener("DOMContentLoaded", () => {
       loadProductsFromLocal();
 
     if (localProducts.length === 0) {
-      products =
-        DEFAULT_PRODUCTS.map(product =>
-          normalizeProduct(product)
-        );
+      products = [];
 
       saveProductsLocal();
     } else {
@@ -967,9 +960,19 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    /*
+     * Якщо Supabase порожній, НЕ створюємо
+     * і НЕ повертаємо жодних стандартних продуктів.
+     */
     if (cloudProducts.length === 0) {
+      if (products.length === 0) {
+        products = [];
+        saveProductsLocal();
+        renderProducts();
+      }
+
       console.warn(
-        "Supabase повернув порожню базу. Локальні продукти збережено."
+        "Supabase повернув порожню базу продуктів."
       );
 
       return;
@@ -1089,7 +1092,9 @@ document.addEventListener("DOMContentLoaded", () => {
         "var(--text-secondary)";
 
       empty.textContent =
-        "Продуктів не знайдено.";
+        products.length === 0
+          ? "База продуктів порожня."
+          : "Продуктів не знайдено.";
 
       grid.appendChild(empty);
 
@@ -1591,20 +1596,6 @@ document.addEventListener("DOMContentLoaded", () => {
             weight
           );
 
-        /*
-         * НЕ перезаписуємо попередній текст.
-         *
-         * Якщо поле вже має дані:
-         *
-         * Яйця...
-         *
-         * то наступний продукт буде:
-         *
-         * Яйця...
-         * Молоко...
-         *
-         * тобто автоматично з нового рядка.
-         */
         if (calcInput) {
           const currentText =
             calcInput.value.trim();
@@ -1614,11 +1605,6 @@ document.addEventListener("DOMContentLoaded", () => {
               ? `${currentText}\n${text}`
               : text;
 
-          /*
-           * Ставимо курсор у кінець поля.
-           * Це аналог переходу на новий рядок
-           * після Enter.
-           */
           calcInput.focus();
 
           calcInput.setSelectionRange(
@@ -1626,10 +1612,6 @@ document.addEventListener("DOMContentLoaded", () => {
             calcInput.value.length
           );
 
-          /*
-           * Прокручуємо textarea вниз,
-           * якщо рядків стало багато.
-           */
           calcInput.scrollTop =
             calcInput.scrollHeight;
         }
@@ -2632,15 +2614,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* =======================================================
        РУЧНЕ ДОДАВАННЯ КАЛОРІЙ
-       
-       Підтримується:
-       
-       +25 ккал
-       +25 калорій
-       25 ккал
-       25 калорій
-       + 25 ккал
-       + 25 калорій
     ======================================================= */
 
     const kcalMatch =
@@ -2674,17 +2647,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* =======================================================
        БУДЬ-ЯКИЙ ІНШИЙ ТЕКСТ
-       
-       Наприклад:
-       
-       Привіт
-       Тренування
-       Після тренування
-       + соус
-       Будь-який коментар
-       
-       Текст приймається без помилки.
-       КБЖВ такого тексту = 0.
     ======================================================= */
 
     return {
@@ -2713,9 +2675,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const text =
           calcInput?.value.trim() || "";
 
-        /*
-         * Поле повністю порожнє.
-         */
         if (!text) {
           showButtonState(
             calcAdd,
@@ -2728,9 +2687,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        /*
-         * Кожен рядок — окремий запис.
-         */
         const lines =
           text
             .split(/\r?\n/)
@@ -2751,11 +2707,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        /*
-         * Оскільки parseCalculatorLine приймає
-         * будь-який непорожній текст, сюди
-         * потраплять усі введені рядки.
-         */
         if (parsedItems.length === 0) {
           showButtonState(
             calcAdd,
@@ -2779,10 +2730,6 @@ document.addEventListener("DOMContentLoaded", () => {
         updateTotals();
 
 
-        /*
-         * Після додавання очищаємо поле,
-         * щоб наступне введення було новим.
-         */
         calcInput.value = "";
 
 
