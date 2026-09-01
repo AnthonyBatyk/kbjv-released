@@ -1457,37 +1457,65 @@ document.addEventListener("DOMContentLoaded", () => {
      SEARCH
   ========================================================= */
 
-if (searchInput) {
-  searchInput.addEventListener(
-    "input",
-    () => {
-      const scrollPosition =
-        window.scrollY;
+  if (searchInput) {
+    searchInput.addEventListener(
+      "input",
+      () => {
+        const scrollX =
+          window.scrollX;
 
-      renderProducts(
-        searchInput.value
-      );
+        const scrollY =
+          window.scrollY;
 
-      if (clearSearch) {
-        clearSearch.style.display =
+        const wasFocused =
+          document.activeElement ===
+          searchInput;
+
+        renderProducts(
           searchInput.value
-            ? "block"
-            : "none";
-      }
+        );
 
-      window.scrollTo(
-        0,
-        scrollPosition
-      );
-    }
-  );
-}
+        if (clearSearch) {
+          clearSearch.style.display =
+            searchInput.value
+              ? "block"
+              : "none";
+        }
+
+        if (wasFocused) {
+          searchInput.focus({
+            preventScroll: true
+          });
+        }
+
+        requestAnimationFrame(() => {
+          window.scrollTo(
+            scrollX,
+            scrollY
+          );
+
+          requestAnimationFrame(() => {
+            window.scrollTo(
+              scrollX,
+              scrollY
+            );
+          });
+        });
+      }
+    );
+  }
 
 
   if (clearSearch) {
     clearSearch.addEventListener(
       "click",
       () => {
+        const scrollX =
+          window.scrollX;
+
+        const scrollY =
+          window.scrollY;
+
         searchInput.value = "";
 
         clearSearch.style.display =
@@ -1495,7 +1523,16 @@ if (searchInput) {
 
         renderProducts();
 
-        searchInput.focus();
+        searchInput.focus({
+          preventScroll: true
+        });
+
+        requestAnimationFrame(() => {
+          window.scrollTo(
+            scrollX,
+            scrollY
+          );
+        });
       }
     );
   }
