@@ -5,7 +5,8 @@ document.addEventListener("DOMContentLoaded", () => {
      SUPABASE
   ========================================================= */
 
-  const SUPABASE_URL = "https://hbyeycsoxedzvapesrwq.supabase.co";
+  const SUPABASE_URL =
+    "https://hbyeycsoxedzvapesrwq.supabase.co";
 
   const SUPABASE_KEY =
     "sb_publishable_uSR9bn7YeGiy-PTKlUTBNw_ZQtL5Icn";
@@ -101,6 +102,43 @@ document.addEventListener("DOMContentLoaded", () => {
       background: #dc2626 !important;
       background-color: #dc2626 !important;
     }
+
+    /*
+      ВАЖЛИВО:
+      Кнопка "Скасувати" у модалці під час статусу
+      повинна бути реально червоною, а не тільки
+      мати червоне світіння.
+    */
+    #product-cancel.button-status-error,
+    #add-product-cancel.button-status-error,
+    #archive-text-cancel.button-status-error {
+      background: #ef4444 !important;
+      background-color: #ef4444 !important;
+      border-color: #ef4444 !important;
+      color: #ffffff !important;
+      box-shadow:
+        0 0 0 1px rgba(239, 68, 68, 0.35),
+        0 0 18px rgba(239, 68, 68, 0.35) !important;
+    }
+
+    #product-cancel.button-status-error:hover,
+    #add-product-cancel.button-status-error:hover,
+    #archive-text-cancel.button-status-error:hover {
+      background: #ef4444 !important;
+      background-color: #ef4444 !important;
+      border-color: #ef4444 !important;
+      color: #ffffff !important;
+    }
+
+    /*
+      Коли режим зміни розташування активний,
+      кнопка залишається синьою/info і не втрачає
+      можливість натискання.
+    */
+    #reorder-products.button-status-info {
+      cursor: pointer !important;
+      pointer-events: auto !important;
+    }
   `;
 
   document.head.appendChild(statusStyle);
@@ -114,10 +152,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const CALCULATOR_KEY = "kbjv_calculator";
   const ARCHIVE_KEY = "kbjv_archive";
 
-  // Зберігаємо стан інтерфейсу окремо
   const ACTIVE_TAB_KEY = "kbjv_active_tab";
   const CALCULATOR_DRAFT_KEY = "kbjv_calculator_draft";
   const SEARCH_QUERY_KEY = "kbjv_search_query";
+
+  /*
+    Зберігаємо саме режим зміни розташування.
+    Це потрібно, щоб після F5 стан інтерфейсу не
+    поводився непередбачувано.
+  */
+  const REORDER_MODE_KEY = "kbjv_reorder_mode";
 
 
   /* =========================================================
@@ -133,7 +177,8 @@ document.addEventListener("DOMContentLoaded", () => {
       fat: 10.2,
       carb: 0.8,
       unit: "г",
-      full_name: "Яйця aro курячі харчові столові L C0"
+      full_name:
+        "Яйця aro курячі харчові столові L C0"
     },
 
     {
@@ -179,15 +224,20 @@ document.addEventListener("DOMContentLoaded", () => {
      DOM
   ========================================================= */
 
-  const tabs = document.querySelectorAll(".tab");
+  const tabs =
+    document.querySelectorAll(".tab");
 
-  const pages = document.querySelectorAll(".page");
+  const pages =
+    document.querySelectorAll(".page");
 
-  const grid = document.getElementById("grid");
+  const grid =
+    document.getElementById("grid");
 
-  const searchInput = document.getElementById("search");
+  const searchInput =
+    document.getElementById("search");
 
-  const clearSearch = document.getElementById("clear-search");
+  const clearSearch =
+    document.getElementById("clear-search");
 
   const exportProductsButton =
     document.getElementById("export-products");
@@ -361,22 +411,24 @@ document.addEventListener("DOMContentLoaded", () => {
   ) {
     if (!button) return;
 
+    clearTimeout(
+      button._statusTimeout
+    );
+
     clearButtonStatus(button);
 
     const originalText =
       button.dataset.originalText ||
       button.textContent.trim();
 
-    button.dataset.originalText = originalText;
+    button.dataset.originalText =
+      originalText;
 
-    button.textContent = text;
+    button.textContent =
+      text;
 
     button.classList.add(
       `button-status-${state}`
-    );
-
-    clearTimeout(
-      button._statusTimeout
     );
 
     button._statusTimeout =
@@ -385,6 +437,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         button.textContent =
           originalText;
+
+        /*
+          Для кнопки reorder важливо не залишати
+          старий dataset originalText після завершення.
+        */
+        if (
+          button ===
+          reorderProductsButton
+        ) {
+          delete button.dataset.originalText;
+        }
       }, duration);
   }
 
@@ -409,7 +472,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     clearButtonStatus(button);
 
-    button.textContent = text;
+    button.textContent =
+      text;
 
     button.classList.add(
       `button-status-${state}`
@@ -438,7 +502,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-  function number(value, fallback = 0) {
+  function number(
+    value,
+    fallback = 0
+  ) {
     const parsed =
       Number.parseFloat(value);
 
@@ -448,13 +515,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-  function round(value, decimals = 2) {
+  function round(
+    value,
+    decimals = 2
+  ) {
     const multiplier =
       10 ** decimals;
 
     return (
       Math.round(
-        (number(value) + Number.EPSILON) *
+        (number(value) +
+          Number.EPSILON) *
           multiplier
       ) / multiplier
     );
@@ -473,11 +544,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function escapeHTML(value) {
     return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+      .replaceAll(
+        "&",
+        "&amp;"
+      )
+      .replaceAll(
+        "<",
+        "&lt;"
+      )
+      .replaceAll(
+        ">",
+        "&gt;"
+      )
+      .replaceAll(
+        '"',
+        "&quot;"
+      )
+      .replaceAll(
+        "'",
+        "&#039;"
+      );
   }
 
 
@@ -511,11 +597,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const name =
       String(
         product.name ??
-        product.text ??
-        ""
+          product.text ??
+          ""
       ).trim();
 
-    if (!name) return null;
+    if (!name) {
+      return null;
+    }
 
     return {
       id:
@@ -524,21 +612,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
       name,
 
-      kcal: number(
-        product.kcal
-      ),
+      kcal:
+        number(product.kcal),
 
-      protein: number(
-        product.protein
-      ),
+      protein:
+        number(product.protein),
 
-      fat: number(
-        product.fat
-      ),
+      fat:
+        number(product.fat),
 
-      carb: number(
-        product.carb
-      ),
+      carb:
+        number(product.carb),
 
       unit:
         product.unit ||
@@ -638,7 +722,8 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
     if (draft !== null) {
-      calcInput.value = draft;
+      calcInput.value =
+        draft;
     }
   }
 
@@ -672,12 +757,38 @@ document.addEventListener("DOMContentLoaded", () => {
         SEARCH_QUERY_KEY
       ) || "";
 
-    searchInput.value = query;
+    searchInput.value =
+      query;
 
     if (clearSearch) {
       clearSearch.style.display =
-        query ? "block" : "none";
+        query
+          ? "block"
+          : "none";
     }
+  }
+
+
+  /* =========================================================
+     REORDER STATE PERSISTENCE
+  ========================================================= */
+
+  function saveReorderMode() {
+    localStorage.setItem(
+      REORDER_MODE_KEY,
+      reorderMode
+        ? "true"
+        : "false"
+    );
+  }
+
+
+  function loadReorderMode() {
+    return (
+      localStorage.getItem(
+        REORDER_MODE_KEY
+      ) === "true"
+    );
   }
 
 
@@ -857,10 +968,16 @@ document.addEventListener("DOMContentLoaded", () => {
         await supabaseClient
           .from("products")
           .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", {
-            ascending: true
-          });
+          .eq(
+            "user_id",
+            user.id
+          )
+          .order(
+            "created_at",
+            {
+              ascending: true
+            }
+          );
 
       if (error) {
         console.error(
@@ -896,19 +1013,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const map =
       new Map();
 
-    localProducts.forEach(product => {
-      map.set(
-        product.id,
-        product
-      );
-    });
+    localProducts.forEach(
+      product => {
+        map.set(
+          product.id,
+          product
+        );
+      }
+    );
 
-    remoteProducts.forEach(product => {
-      map.set(
-        product.id,
-        product
-      );
-    });
+    remoteProducts.forEach(
+      product => {
+        map.set(
+          product.id,
+          product
+        );
+      }
+    );
 
     return Array.from(
       map.values()
@@ -956,7 +1077,8 @@ document.addEventListener("DOMContentLoaded", () => {
           .upsert(
             payload,
             {
-              onConflict: "id"
+              onConflict:
+                "id"
             }
           );
 
@@ -1000,8 +1122,14 @@ document.addEventListener("DOMContentLoaded", () => {
         await supabaseClient
           .from("products")
           .delete()
-          .eq("id", productId)
-          .eq("user_id", user.id);
+          .eq(
+            "id",
+            productId
+          )
+          .eq(
+            "user_id",
+            user.id
+          );
 
       if (error) {
         console.error(
@@ -1037,7 +1165,9 @@ document.addEventListener("DOMContentLoaded", () => {
       products =
         DEFAULT_PRODUCTS.map(
           product =>
-            normalizeProduct(product)
+            normalizeProduct(
+              product
+            )
         );
 
       saveProductsLocal();
@@ -1046,6 +1176,29 @@ document.addEventListener("DOMContentLoaded", () => {
         searchInput?.value || ""
       );
     }
+
+    /*
+      Відновлюємо режим тільки після того,
+      як продукти завантажені.
+    */
+    reorderMode =
+      loadReorderMode();
+
+    if (reorderMode) {
+      grid.classList.add(
+        "reorder-mode"
+      );
+
+      setButtonStatusPermanent(
+        reorderProductsButton,
+        "Завершити зміну розташування?",
+        "info"
+      );
+    }
+
+    renderProducts(
+      searchInput?.value || ""
+    );
 
     const remoteProducts =
       await loadProductsFromSupabase();
@@ -1110,30 +1263,37 @@ document.addEventListener("DOMContentLoaded", () => {
         .toLowerCase();
 
     const filtered =
-      products.filter(product => {
-        if (!query) {
-          return true;
-        }
+      products.filter(
+        product => {
+          if (!query) {
+            return true;
+          }
 
-        return (
-          product.name
-            .toLowerCase()
-            .includes(query) ||
-          String(
-            product.full_name || ""
-          )
-            .toLowerCase()
-            .includes(query)
-        );
-      });
+          return (
+            product.name
+              .toLowerCase()
+              .includes(query) ||
+            String(
+              product.full_name ||
+                ""
+            )
+              .toLowerCase()
+              .includes(query)
+          );
+        }
+      );
 
     grid.innerHTML = "";
 
-    filtered.forEach(product => {
-      grid.appendChild(
-        createProductCard(product)
-      );
-    });
+    filtered.forEach(
+      product => {
+        grid.appendChild(
+          createProductCard(
+            product
+          )
+        );
+      }
+    );
 
     if (reorderMode) {
       enableDragAndDrop();
@@ -1145,9 +1305,13 @@ document.addEventListener("DOMContentLoaded", () => {
      PRODUCT CARD
   ========================================================= */
 
-  function createProductCard(product) {
+  function createProductCard(
+    product
+  ) {
     const article =
-      document.createElement("article");
+      document.createElement(
+        "article"
+      );
 
     article.className =
       "food-card";
@@ -1196,13 +1360,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         <div class="badge">
           ${escapeHTML(
-            getInitials(product.name)
+            getInitials(
+              product.name
+            )
           )}
         </div>
 
         <div>
           <div class="name">
-            ${escapeHTML(product.name)}
+            ${escapeHTML(
+              product.name
+            )}
           </div>
 
           <div class="meta">
@@ -1222,7 +1390,9 @@ document.addEventListener("DOMContentLoaded", () => {
           </span>
 
           <span class="val">
-            ${formatNumber(product.kcal)}
+            ${formatNumber(
+              product.kcal
+            )}
           </span>
         </div>
 
@@ -1232,7 +1402,9 @@ document.addEventListener("DOMContentLoaded", () => {
           </span>
 
           <span class="val">
-            ${formatNumber(product.protein)} г
+            ${formatNumber(
+              product.protein
+            )} г
           </span>
         </div>
 
@@ -1242,7 +1414,9 @@ document.addEventListener("DOMContentLoaded", () => {
           </span>
 
           <span class="val">
-            ${formatNumber(product.fat)} г
+            ${formatNumber(
+              product.fat
+            )} г
           </span>
         </div>
 
@@ -1252,7 +1426,9 @@ document.addEventListener("DOMContentLoaded", () => {
           </span>
 
           <span class="val">
-            ${formatNumber(product.carb)} г
+            ${formatNumber(
+              product.carb
+            )} г
           </span>
         </div>
 
@@ -1285,7 +1461,9 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        openProductModal(product);
+        openProductModal(
+          product
+        );
       }
     );
 
@@ -1304,7 +1482,9 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        openProductModal(product);
+        openProductModal(
+          product
+        );
       }
     );
 
@@ -1343,7 +1523,8 @@ document.addEventListener("DOMContentLoaded", () => {
       () => {
         if (!searchInput) return;
 
-        searchInput.value = "";
+        searchInput.value =
+          "";
 
         saveSearchQuery();
 
@@ -1360,7 +1541,9 @@ document.addEventListener("DOMContentLoaded", () => {
      PRODUCT MODAL
   ========================================================= */
 
-  function openProductModal(product) {
+  function openProductModal(
+    product
+  ) {
     selectedProduct =
       product;
 
@@ -1442,7 +1625,10 @@ document.addEventListener("DOMContentLoaded", () => {
   );
 
 
-  function calculateProduct(product, weight) {
+  function calculateProduct(
+    product,
+    weight
+  ) {
     const multiplier =
       number(weight) / 100;
 
@@ -1619,8 +1805,6 @@ document.addEventListener("DOMContentLoaded", () => {
           text;
       }
 
-      // ВАЖЛИВО:
-      // одразу зберігаємо змінений текст
       saveCalculatorDraft();
 
       showButtonState(
@@ -1642,12 +1826,23 @@ document.addEventListener("DOMContentLoaded", () => {
   ========================================================= */
 
   function openAddProductModal() {
-    newProductName.value = "";
-    newProductKcal.value = "";
-    newProductProtein.value = "";
-    newProductFat.value = "";
-    newProductCarb.value = "";
-    newProductDescription.value = "";
+    newProductName.value =
+      "";
+
+    newProductKcal.value =
+      "";
+
+    newProductProtein.value =
+      "";
+
+    newProductFat.value =
+      "";
+
+    newProductCarb.value =
+      "";
+
+    newProductDescription.value =
+      "";
 
     clearButtonStatus(
       addProductCancel
@@ -1739,21 +1934,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
       name,
 
-      kcal: number(
-        newProductKcal.value
-      ),
+      kcal:
+        number(
+          newProductKcal.value
+        ),
 
-      protein: number(
-        newProductProtein.value
-      ),
+      protein:
+        number(
+          newProductProtein.value
+        ),
 
-      fat: number(
-        newProductFat.value
-      ),
+      fat:
+        number(
+          newProductFat.value
+        ),
 
-      carb: number(
-        newProductCarb.value
-      ),
+      carb:
+        number(
+          newProductCarb.value
+        ),
 
       unit: "г",
 
@@ -1761,7 +1960,9 @@ document.addEventListener("DOMContentLoaded", () => {
         newProductDescription.value.trim()
     };
 
-    products.push(product);
+    products.push(
+      product
+    );
 
     saveProductsLocal();
 
@@ -1820,7 +2021,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   function renderDeleteProductList() {
-    deleteProductList.innerHTML = "";
+    deleteProductList.innerHTML =
+      "";
 
     if (!products.length) {
       deleteProductList.innerHTML = `
@@ -1832,77 +2034,82 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    products.forEach(product => {
-      const item =
-        document.createElement(
-          "div"
-        );
+    products.forEach(
+      product => {
+        const item =
+          document.createElement(
+            "div"
+          );
 
-      item.className =
-        "delete-product-item";
+        item.className =
+          "delete-product-item";
 
-      item.innerHTML = `
-        <div class="delete-product-item-name">
-          ${escapeHTML(product.name)}
-        </div>
+        item.innerHTML = `
+          <div class="delete-product-item-name">
+            ${escapeHTML(
+              product.name
+            )}
+          </div>
 
-        <button
-          type="button"
-          class="delete-product-item-button"
-        >
-          Видалити
-        </button>
-      `;
+          <button
+            type="button"
+            class="delete-product-item-button"
+          >
+            Видалити
+          </button>
+        `;
 
-      const button =
-        item.querySelector(
-          ".delete-product-item-button"
-        );
+        const button =
+          item.querySelector(
+            ".delete-product-item-button"
+          );
 
-      button.addEventListener(
-        "click",
-        async () => {
-          const confirmed =
-            confirm(
-              `Видалити продукт «${product.name}»?`
+        button.addEventListener(
+          "click",
+          async () => {
+            const confirmed =
+              confirm(
+                `Видалити продукт «${product.name}»?`
+              );
+
+            if (!confirmed) {
+              return;
+            }
+
+            products =
+              products.filter(
+                item =>
+                  item.id !==
+                  product.id
+              );
+
+            saveProductsLocal();
+
+            renderProducts(
+              searchInput?.value ||
+                ""
             );
 
-          if (!confirmed) {
-            return;
+            renderDeleteProductList();
+
+            await deleteProductFromSupabase(
+              product.id
+            );
+
+            showButtonState(
+              deleteProductButton,
+              "Видалено",
+              "success",
+              1200
+            );
           }
+        );
 
-          products =
-            products.filter(
-              item =>
-                item.id !==
-                product.id
-            );
-
-          saveProductsLocal();
-
-          renderProducts(
-            searchInput?.value || ""
-          );
-
-          renderDeleteProductList();
-
-          await deleteProductFromSupabase(
-            product.id
-          );
-
-          showButtonState(
-            deleteProductButton,
-            "Видалено",
-            "success",
-            1200
-          );
-        }
-      );
-
-      deleteProductList.appendChild(
-        item
-      );
-    });
+        deleteProductList.appendChild(
+          item
+        );
+      }
+    );
   }
 
 
@@ -2094,7 +2301,8 @@ document.addEventListener("DOMContentLoaded", () => {
       movedProduct
     );
 
-    reorderChanged = true;
+    reorderChanged =
+      true;
 
     saveProductsLocal();
 
@@ -2121,16 +2329,30 @@ document.addEventListener("DOMContentLoaded", () => {
         );
       });
 
-    draggedCard = null;
+    draggedCard =
+      null;
   }
 
 
   reorderProductsButton?.addEventListener(
     "click",
     () => {
+      /*
+        ПЕРШЕ НАТИСКАННЯ:
+        вмикаємо режим переміщення.
+      */
       if (!reorderMode) {
-        reorderMode = true;
-        reorderChanged = false;
+        clearTimeout(
+          reorderProductsButton._statusTimeout
+        );
+
+        reorderMode =
+          true;
+
+        reorderChanged =
+          false;
+
+        saveReorderMode();
 
         grid.classList.add(
           "reorder-mode"
@@ -2149,7 +2371,19 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      reorderMode = false;
+      /*
+        ДРУГЕ НАТИСКАННЯ:
+        завершуємо режим переміщення.
+      */
+
+      clearTimeout(
+        reorderProductsButton._statusTimeout
+      );
+
+      reorderMode =
+        false;
+
+      saveReorderMode();
 
       grid.classList.remove(
         "reorder-mode"
@@ -2159,6 +2393,10 @@ document.addEventListener("DOMContentLoaded", () => {
         searchInput?.value || ""
       );
 
+      /*
+        Якщо позиції реально змінювалися —
+        показуємо зелений статус.
+      */
       if (reorderChanged) {
         showButtonState(
           reorderProductsButton,
@@ -2166,9 +2404,24 @@ document.addEventListener("DOMContentLoaded", () => {
           "success",
           1200
         );
+      } else {
+        /*
+          Якщо нічого не переміщали,
+          просто повертаємо стандартний текст.
+        */
+        clearButtonStatus(
+          reorderProductsButton
+        );
+
+        reorderProductsButton.textContent =
+          "Змінити розташування продукту";
+
+        delete reorderProductsButton.dataset
+          .originalText;
       }
 
-      reorderChanged = false;
+      reorderChanged =
+        false;
     }
   );
 
@@ -2239,7 +2492,8 @@ document.addEventListener("DOMContentLoaded", () => {
           .toISOString()
           .slice(0, 10);
 
-      link.href = url;
+      link.href =
+        url;
 
       link.download =
         `kbjv-database-${date}.json`;
@@ -2316,10 +2570,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const normalized =
               imported
-                .map(normalizeProduct)
+                .map(
+                  normalizeProduct
+                )
                 .filter(Boolean);
 
-            if (!normalized.length) {
+            if (
+              !normalized.length
+            ) {
               throw new Error(
                 "Файл не містить продуктів"
               );
@@ -2340,7 +2598,8 @@ document.addEventListener("DOMContentLoaded", () => {
             saveProductsLocal();
 
             renderProducts(
-              searchInput?.value || ""
+              searchInput?.value ||
+                ""
             );
 
             await syncProductsToSupabase();
@@ -2363,7 +2622,8 @@ document.addEventListener("DOMContentLoaded", () => {
               1500
             );
           } finally {
-            importFile.value = "";
+            importFile.value =
+              "";
           }
         };
 
@@ -2376,9 +2636,12 @@ document.addEventListener("DOMContentLoaded", () => {
      CALCULATOR PARSER
   ========================================================= */
 
-  function parseCalculatorLine(line) {
+  function parseCalculatorLine(
+    line
+  ) {
     const text =
-      String(line || "").trim();
+      String(line || "")
+        .trim();
 
     if (!text) {
       return null;
@@ -2393,38 +2656,41 @@ document.addEventListener("DOMContentLoaded", () => {
       return {
         id: createId(),
 
-        text: text,
+        text,
 
-        kcal: number(
-          productMatch[3].replace(
-            ",",
-            "."
-          )
-        ),
+        kcal:
+          number(
+            productMatch[3].replace(
+              ",",
+              "."
+            )
+          ),
 
-        protein: number(
-          productMatch[4].replace(
-            ",",
-            "."
-          )
-        ),
+        protein:
+          number(
+            productMatch[4].replace(
+              ",",
+              "."
+            )
+          ),
 
-        fat: number(
-          productMatch[5].replace(
-            ",",
-            "."
-          )
-        ),
+        fat:
+          number(
+            productMatch[5].replace(
+              ",",
+              "."
+            )
+          ),
 
-        carb: number(
-          productMatch[6].replace(
-            ",",
-            "."
+        carb:
+          number(
+            productMatch[6].replace(
+              ",",
+              "."
+            )
           )
-        )
       };
     }
-
 
     const kcalMatch =
       text.match(
@@ -2437,12 +2703,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         text,
 
-        kcal: number(
-          kcalMatch[1].replace(
-            ",",
-            "."
-          )
-        ),
+        kcal:
+          number(
+            kcalMatch[1].replace(
+              ",",
+              "."
+            )
+          ),
 
         protein: 0,
 
@@ -2451,7 +2718,6 @@ document.addEventListener("DOMContentLoaded", () => {
         carb: 0
       };
     }
-
 
     return {
       id: createId(),
@@ -2493,14 +2759,17 @@ document.addEventListener("DOMContentLoaded", () => {
       const lines =
         text
           .split(/\r?\n/)
-          .map(line =>
-            line.trim()
+          .map(
+            line =>
+              line.trim()
           )
           .filter(Boolean);
 
       const parsedItems =
         lines
-          .map(parseCalculatorLine)
+          .map(
+            parseCalculatorLine
+          )
           .filter(Boolean);
 
       if (!parsedItems.length) {
@@ -2522,9 +2791,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       renderCalculator();
 
-      // Текст успішно доданий.
-      // Тому чернетку тепер можна видалити.
-      calcInput.value = "";
+      calcInput.value =
+        "";
 
       clearCalculatorDraft();
 
@@ -2566,7 +2834,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      calcInput.value = "";
+      calcInput.value =
+        "";
 
       clearCalculatorDraft();
 
@@ -2607,7 +2876,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      calculatorItems = [];
+      calculatorItems =
+        [];
 
       saveCalculatorLocal();
 
@@ -2629,12 +2899,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getTotals() {
     return calculatorItems.reduce(
-      (total, item) => {
+      (
+        total,
+        item
+      ) => {
         total.kcal +=
           number(item.kcal);
 
         total.protein +=
-          number(item.protein);
+          number(
+            item.protein
+          );
 
         total.fat +=
           number(item.fat);
@@ -2687,10 +2962,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderCalculatorLog() {
     if (!calcLog) return;
 
-    calcLog.innerHTML = "";
+    calcLog.innerHTML =
+      "";
 
     calculatorItems.forEach(
-      (item, index) => {
+      (
+        item,
+        index
+      ) => {
         const logItem =
           document.createElement(
             "div"
@@ -2859,7 +3138,9 @@ document.addEventListener("DOMContentLoaded", () => {
      ARCHIVE RENDER
   ========================================================= */
 
-  function formatArchiveDate(dateValue) {
+  function formatArchiveDate(
+    dateValue
+  ) {
     const date =
       new Date(dateValue);
 
@@ -2889,7 +3170,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderArchive() {
     if (!archiveLog) return;
 
-    archiveLog.innerHTML = "";
+    archiveLog.innerHTML =
+      "";
 
     if (!archiveItems.length) {
       archiveLog.innerHTML = `
@@ -3051,11 +3333,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ".archive-content"
       );
 
-    const oldDate =
-      formatArchiveDate(
-        item.date
-      );
-
     const input =
       document.createElement(
         "input"
@@ -3091,7 +3368,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const original =
       content.innerHTML;
 
-    content.innerHTML = "";
+    content.innerHTML =
+      "";
 
     content.appendChild(
       input
@@ -3335,7 +3613,8 @@ document.addEventListener("DOMContentLoaded", () => {
     "keydown",
     event => {
       if (
-        event.key !== "Escape"
+        event.key !==
+        "Escape"
       ) {
         return;
       }
@@ -3383,7 +3662,8 @@ document.addEventListener("DOMContentLoaded", () => {
     "keydown",
     event => {
       if (
-        event.key === "Enter"
+        event.key ===
+        "Enter"
       ) {
         event.preventDefault();
 
@@ -3408,7 +3688,8 @@ document.addEventListener("DOMContentLoaded", () => {
       "keydown",
       event => {
         if (
-          event.key === "Enter"
+          event.key ===
+          "Enter"
         ) {
           event.preventDefault();
 
@@ -3429,14 +3710,10 @@ document.addEventListener("DOMContentLoaded", () => {
   archiveItems =
     loadArchiveLocal();
 
-  // Відновлюємо незавершений текст
-  // калькулятора ДО відображення сторінки.
   loadCalculatorDraft();
 
-  // Відновлюємо пошук.
   loadSearchQuery();
 
-  // Відновлюємо активну вкладку.
   const savedTab =
     loadActiveTab();
 
@@ -3444,13 +3721,10 @@ document.addEventListener("DOMContentLoaded", () => {
     savedTab
   );
 
-  // Показуємо збережені дані
-  // калькулятора та архіву.
   renderCalculator();
 
   renderArchive();
 
-  // Завантажуємо продукти.
   initializeProducts();
 
 
@@ -3458,9 +3732,7 @@ document.addEventListener("DOMContentLoaded", () => {
      SUPABASE AUTH LISTENER
   ========================================================= */
 
-  if (
-    supabaseClient
-  ) {
+  if (supabaseClient) {
     supabaseClient.auth.onAuthStateChange(
       async (
         event,
