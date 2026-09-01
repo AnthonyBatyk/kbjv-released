@@ -162,26 +162,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const DEFAULT_PRODUCTS = [
     {
-      id: "local-eggs",
-      name: "Яйця",
-      kcal: 155,
-      protein: 12,
-      fat: 10.2,
-      carb: 0.8,
+      id: "default-product",
+      name: "Продукт",
+      kcal: 999,
+      protein: 99.9,
+      fat: 99.9,
+      carb: 99.9,
       unit: "г",
-      full_name: "Яйця aro курячі харчові столові L C0"
-    },
-
-    {
-      id: "local-heineken",
-      name: "Пиво Heineken",
-      kcal: 42,
-      protein: 0,
-      fat: 0,
-      carb: 3.2,
-      unit: "мл",
-      full_name:
-        "Пиво Heineken світле нефільтроване пастеризоване, напій алкогольний, вміст спирту 5%"
+      full_name: "Продукт за замовчуванням"
     }
   ];
 
@@ -1113,11 +1101,43 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    for (const product of products) {
-      await saveProductToSupabase(product);
-    }
+    try {
+      /* =====================================================
+         DELETE OLD PRODUCTS
+      ===================================================== */
 
-    saveProductsLocal();
+      const {
+        error: deleteError
+      } = await supabaseClient
+        .from("products")
+        .delete()
+        .eq("owner_id", user.id);
+
+      if (deleteError) {
+        console.error(
+          "Supabase old products delete error:",
+          deleteError
+        );
+
+        return;
+      }
+
+      /* =====================================================
+         SAVE CURRENT PRODUCTS
+      ===================================================== */
+
+      for (const product of products) {
+        await saveProductToSupabase(product);
+      }
+
+      saveProductsLocal();
+
+    } catch (error) {
+      console.error(
+        "Supabase sync exception:",
+        error
+      );
+    }
   }
 
 
