@@ -281,6 +281,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const calcClearBlocks =
     document.getElementById("calc-clear-blocks");
 
+  const calcSection =
+    document.getElementById("calc-section");
+
   const kcalElement =
     document.getElementById("kcal");
 
@@ -3014,6 +3017,38 @@ document.addEventListener("DOMContentLoaded", () => {
         showButtonState(
           calcAdd,
           "Додано",
+          "success",
+          1500
+        );
+      }
+    );
+  }
+
+  /* =========================================================
+   CALCULATOR SECTION
+========================================================= */
+
+  if (calcSection) {
+    calcSection.addEventListener(
+      "click",
+      () => {
+        calculatorItems.push({
+          text: "/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/",
+          kcal: 0,
+          protein: 0,
+          fat: 0,
+          carb: 0
+        });
+
+        saveCalculatorLocal();
+
+        renderCalculatorLog();
+
+        updateTotals();
+
+        showButtonState(
+          calcSection,
+          "Додано ✓",
           "success",
           1500
         );
