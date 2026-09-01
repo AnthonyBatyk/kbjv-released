@@ -152,14 +152,9 @@ document.addEventListener("DOMContentLoaded", () => {
   /* =========================================================
      DEFAULT PRODUCTS
      
-     ВАЖЛИВО:
-     Автоматичних продуктів більше НЕМАЄ.
+     АБСОЛЮТНО ЧИСТИЙ СТАРТ.
      
-     При першому запуску база продуктів буде порожньою.
-     Продукти з'являться тільки після:
-     - імпорту JSON;
-     - ручного додавання;
-     - завантаження вже існуючих продуктів із Supabase.
+     НІЯКИХ ПОЧАТКОВИХ ПРОДУКТІВ НЕМАЄ.
   ========================================================= */
 
   const DEFAULT_PRODUCTS = [];
@@ -924,27 +919,25 @@ document.addEventListener("DOMContentLoaded", () => {
   /* =========================================================
      INITIAL DATABASE LOAD
      
-     НІЯКИХ DEFAULT PRODUCTS.
-     
-     Якщо локальна база порожня:
-       products = []
-     
-     Якщо Supabase порожній:
-       products залишається []
-     
-     Тобто сайт не створює жодного продукту самостійно.
+     ВАЖЛИВО:
+     - якщо localStorage порожній -> products = []
+     - DEFAULT_PRODUCTS також порожній
+     - нічого автоматично не додається
   ========================================================= */
 
   async function initializeProducts() {
     const localProducts =
       loadProductsFromLocal();
 
-    if (localProducts.length === 0) {
-      products = [];
+    products = localProducts;
 
+    /*
+     * Якщо локальна база порожня,
+     * НЕ створюємо жодного продукту.
+     */
+    if (products.length === 0) {
+      products = [];
       saveProductsLocal();
-    } else {
-      products = localProducts;
     }
 
     renderProducts();
@@ -961,23 +954,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /*
-     * Якщо Supabase порожній, НЕ створюємо
-     * і НЕ повертаємо жодних стандартних продуктів.
+     * Якщо Supabase порожній,
+     * залишаємо базу абсолютно порожньою.
      */
     if (cloudProducts.length === 0) {
-      if (products.length === 0) {
-        products = [];
-        saveProductsLocal();
-        renderProducts();
-      }
+      products = [];
+      saveProductsLocal();
+      renderProducts();
 
-      console.warn(
-        "Supabase повернув порожню базу продуктів."
+      console.log(
+        "Supabase порожній. Запущено чисту базу продуктів."
       );
 
       return;
     }
 
+    /*
+     * Якщо продукти реально існують у Supabase,
+     * завантажуємо їх.
+     */
     products = mergeProducts(
       products,
       cloudProducts
@@ -1092,9 +1087,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "var(--text-secondary)";
 
       empty.textContent =
-        products.length === 0
-          ? "База продуктів порожня."
-          : "Продуктів не знайдено.";
+        "Продуктів не знайдено.";
 
       grid.appendChild(empty);
 
@@ -2614,6 +2607,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* =======================================================
        РУЧНЕ ДОДАВАННЯ КАЛОРІЙ
+       
+       Підтримується:
+       
+       +25 ккал
+       +25 калорій
+       25 ккал
+       25 калорій
+       + 25 ккал
+       + 25 калорій
     ======================================================= */
 
     const kcalMatch =
