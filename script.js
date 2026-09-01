@@ -6,37 +6,30 @@ document.addEventListener("DOMContentLoaded", () => {
   ========================================================= */
 
   const SUPABASE_URL = "https://hbyeycsoxedzvapesrwq.supabase.co";
+
   const SUPABASE_KEY =
     "sb_publishable_uSR9bn7YeGiy-PTKlUTBNw_ZQtL5Icn";
 
   let supabaseClient = null;
 
-  try {
-    if (
-      window.supabase &&
-      typeof window.supabase.createClient === "function"
-    ) {
-      supabaseClient = window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_KEY
-      );
-    }
-  } catch (error) {
-    console.error("Supabase initialization error:", error);
+  if (
+    window.supabase &&
+    typeof window.supabase.createClient === "function"
+  ) {
+    supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
   }
 
 
   /* =========================================================
-     BUTTON STATUS STYLES
+     STATUS STYLES
   ========================================================= */
 
   const statusStyle = document.createElement("style");
 
   statusStyle.textContent = `
-    /* =====================================================
-       ACTION BUTTON STATUS
-    ===================================================== */
-
     .button-status-success {
       background: #22c55e !important;
       background-color: #22c55e !important;
@@ -45,6 +38,8 @@ document.addEventListener("DOMContentLoaded", () => {
       box-shadow:
         0 0 0 1px rgba(34, 197, 94, 0.35),
         0 0 18px rgba(34, 197, 94, 0.35) !important;
+      position: relative;
+      animation: kbjvButtonPulse 0.25s ease;
     }
 
     .button-status-error {
@@ -55,6 +50,8 @@ document.addEventListener("DOMContentLoaded", () => {
       box-shadow:
         0 0 0 1px rgba(239, 68, 68, 0.35),
         0 0 18px rgba(239, 68, 68, 0.35) !important;
+      position: relative;
+      animation: kbjvButtonPulse 0.25s ease;
     }
 
     .button-status-info {
@@ -65,27 +62,15 @@ document.addEventListener("DOMContentLoaded", () => {
       box-shadow:
         0 0 0 1px rgba(59, 130, 246, 0.35),
         0 0 18px rgba(59, 130, 246, 0.35) !important;
-    }
-
-    .button-status-success,
-    .button-status-error,
-    .button-status-info {
-      transition:
-        background 0.2s ease,
-        background-color 0.2s ease,
-        border-color 0.2s ease,
-        box-shadow 0.2s ease,
-        color 0.2s ease,
-        transform 0.15s ease;
+      position: relative;
+      animation: kbjvButtonPulse 0.25s ease;
     }
 
     .button-status-success::after,
     .button-status-error::after {
       display: inline-block;
-      margin-left: 7px;
-      font-weight: 800;
-      font-size: 15px;
-      line-height: 1;
+      margin-left: 6px;
+      font-weight: 700;
     }
 
     .button-status-success::after {
@@ -96,22 +81,9 @@ document.addEventListener("DOMContentLoaded", () => {
       content: "✕";
     }
 
-    .button-status-info::after {
-      content: "";
-    }
-
-    .button-status-success.button-status-pulse,
-    .button-status-error.button-status-pulse {
-      animation: kbjvButtonPulse 0.35s ease;
-    }
-
     @keyframes kbjvButtonPulse {
       0% {
-        transform: scale(1);
-      }
-
-      50% {
-        transform: scale(1.025);
+        transform: scale(0.97);
       }
 
       100% {
@@ -119,21 +91,15 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    /* =====================================================
-       DELETE PRODUCT BUTTONS
-    ===================================================== */
-
     .delete-product-item-button {
       background: #ef4444 !important;
       background-color: #ef4444 !important;
-      border-color: #ef4444 !important;
       color: #ffffff !important;
     }
 
     .delete-product-item-button:hover {
       background: #dc2626 !important;
       background-color: #dc2626 !important;
-      border-color: #dc2626 !important;
     }
   `;
 
@@ -147,6 +113,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const PRODUCTS_KEY = "kbjv_products";
   const CALCULATOR_KEY = "kbjv_calculator";
   const ARCHIVE_KEY = "kbjv_archive";
+
+  // Зберігаємо стан інтерфейсу окремо
+  const ACTIVE_TAB_KEY = "kbjv_active_tab";
+  const CALCULATOR_DRAFT_KEY = "kbjv_calculator_draft";
+  const SEARCH_QUERY_KEY = "kbjv_search_query";
 
 
   /* =========================================================
@@ -180,22 +151,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   /* =========================================================
-     GLOBAL STATE
+     STATE
   ========================================================= */
 
   let products = [];
+
   let calculatorItems = [];
+
   let archiveItems = [];
 
   let selectedProduct = null;
+
   let draggedCard = null;
 
   let reorderMode = false;
+
   let reorderChanged = false;
 
   let archiveEditingId = null;
 
   let archiveOriginalDate = null;
+
   let archiveOriginalText = null;
 
 
@@ -204,36 +180,60 @@ document.addEventListener("DOMContentLoaded", () => {
   ========================================================= */
 
   const tabs = document.querySelectorAll(".tab");
+
   const pages = document.querySelectorAll(".page");
 
   const grid = document.getElementById("grid");
 
   const searchInput = document.getElementById("search");
+
   const clearSearch = document.getElementById("clear-search");
 
-  const exportButton = document.getElementById("export-products");
-  const importButton = document.getElementById("import-products");
-  const importFile = document.getElementById("import-file");
+  const exportProductsButton =
+    document.getElementById("export-products");
 
-  const addProductButton = document.getElementById("add-product");
-  const deleteProductButton = document.getElementById("delete-product");
+  const importProductsButton =
+    document.getElementById("import-products");
+
+  const importFile =
+    document.getElementById("import-file");
+
+  const addProductButton =
+    document.getElementById("add-product");
+
+  const deleteProductButton =
+    document.getElementById("delete-product");
+
   const reorderProductsButton =
     document.getElementById("reorder-products");
 
-  const reorderHint = document.getElementById("reorder-hint");
 
-  const productModal = document.getElementById("product-modal");
+  /* =========================================================
+     PRODUCT MODAL DOM
+  ========================================================= */
+
+  const productModal =
+    document.getElementById("product-modal");
+
   const productModalName =
     document.getElementById("product-modal-name");
+
   const productWeight =
     document.getElementById("product-weight");
 
   const productCancel =
     document.getElementById("product-cancel");
+
   const productCopy =
     document.getElementById("product-copy");
+
   const productCalculator =
     document.getElementById("product-calculator");
+
+
+  /* =========================================================
+     ADD PRODUCT MODAL DOM
+  ========================================================= */
 
   const addProductModal =
     document.getElementById("add-product-modal");
@@ -262,6 +262,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const newProductDescription =
     document.getElementById("new-product-description");
 
+
+  /* =========================================================
+     DELETE PRODUCT MODAL DOM
+  ========================================================= */
+
   const deleteProductModal =
     document.getElementById("delete-product-modal");
 
@@ -270,6 +275,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const deleteProductCancel =
     document.getElementById("delete-product-cancel");
+
+
+  /* =========================================================
+     ARCHIVE TEXT MODAL DOM
+  ========================================================= */
+
+  const archiveTextModal =
+    document.getElementById("archive-text-modal");
+
+  const archiveTextInput =
+    document.getElementById("archive-text-input");
+
+  const archiveTextCancel =
+    document.getElementById("archive-text-cancel");
+
+  const archiveTextSave =
+    document.getElementById("archive-text-save");
+
+
+  /* =========================================================
+     CALCULATOR DOM
+  ========================================================= */
 
   const calcInput =
     document.getElementById("calc-input");
@@ -307,33 +334,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const archiveLog =
     document.getElementById("archive-log");
 
-  const archiveTextModal =
-    document.getElementById("archive-text-modal");
-
-  const archiveTextInput =
-    document.getElementById("archive-text-input");
-
-  const archiveTextCancel =
-    document.getElementById("archive-text-cancel");
-
-  const archiveTextSave =
-    document.getElementById("archive-text-save");
-
 
   /* =========================================================
-     BUTTON STATE HELPERS
+     BUTTON STATUS
   ========================================================= */
 
   function clearButtonStatus(button) {
-    if (!button) {
-      return;
-    }
+    if (!button) return;
 
     button.classList.remove(
       "button-status-success",
       "button-status-error",
       "button-status-info",
-      "button-status-pulse"
+      "success",
+      "error",
+      "copied"
     );
   }
 
@@ -344,49 +359,33 @@ document.addEventListener("DOMContentLoaded", () => {
     state,
     duration = 1500
   ) {
-    if (!button) {
-      return;
-    }
-
-    if (!button.dataset.originalText) {
-      button.dataset.originalText =
-        button.textContent.trim();
-    }
-
-    clearTimeout(button._statusTimeout);
+    if (!button) return;
 
     clearButtonStatus(button);
 
+    const originalText =
+      button.dataset.originalText ||
+      button.textContent.trim();
+
+    button.dataset.originalText = originalText;
+
     button.textContent = text;
 
-    if (state === "success") {
-      button.classList.add(
-        "button-status-success",
-        "button-status-pulse"
-      );
-    }
+    button.classList.add(
+      `button-status-${state}`
+    );
 
-    if (state === "error") {
-      button.classList.add(
-        "button-status-error",
-        "button-status-pulse"
-      );
-    }
+    clearTimeout(
+      button._statusTimeout
+    );
 
-    if (state === "info") {
-      button.classList.add(
-        "button-status-info"
-      );
-    }
-
-    if (duration > 0) {
-      button._statusTimeout = setTimeout(() => {
-        button.textContent =
-          button.dataset.originalText || "";
-
+    button._statusTimeout =
+      setTimeout(() => {
         clearButtonStatus(button);
+
+        button.textContent =
+          originalText;
       }, duration);
-    }
   }
 
 
@@ -395,133 +394,290 @@ document.addEventListener("DOMContentLoaded", () => {
     text,
     state
   ) {
-    if (!button) {
-      return;
-    }
+    if (!button) return;
 
-    if (!button.dataset.originalText) {
-      button.dataset.originalText =
-        button.textContent.trim();
-    }
+    clearTimeout(
+      button._statusTimeout
+    );
 
-    clearTimeout(button._statusTimeout);
+    const originalText =
+      button.dataset.originalText ||
+      button.textContent.trim();
+
+    button.dataset.originalText =
+      originalText;
+
     clearButtonStatus(button);
 
     button.textContent = text;
 
-    if (state === "success") {
-      button.classList.add(
-        "button-status-success",
-        "button-status-pulse"
-      );
-    }
-
-    if (state === "error") {
-      button.classList.add(
-        "button-status-error",
-        "button-status-pulse"
-      );
-    }
-
-    if (state === "info") {
-      button.classList.add(
-        "button-status-info"
-      );
-    }
-  }
-
-
-  /* =========================================================
-     HELPERS
-  ========================================================= */
-
-  function createId(prefix = "id") {
-    return (
-      prefix +
-      "-" +
-      Date.now() +
-      "-" +
-      Math.random().toString(36).slice(2, 9)
+    button.classList.add(
+      `button-status-${state}`
     );
   }
 
 
-  function number(value) {
-    const parsed = Number(value);
+  /* =========================================================
+     GENERAL HELPERS
+  ========================================================= */
 
-    return Number.isFinite(parsed) ? parsed : 0;
+  function createId() {
+    if (
+      typeof crypto !== "undefined" &&
+      crypto.randomUUID
+    ) {
+      return crypto.randomUUID();
+    }
+
+    return (
+      Date.now().toString(36) +
+      Math.random()
+        .toString(36)
+        .substring(2)
+    );
   }
 
 
-  function round(value, decimals = 1) {
-    const factor = Math.pow(10, decimals);
+  function number(value, fallback = 0) {
+    const parsed =
+      Number.parseFloat(value);
 
-    return Math.round(
-      (number(value) + Number.EPSILON) * factor
-    ) / factor;
+    return Number.isFinite(parsed)
+      ? parsed
+      : fallback;
+  }
+
+
+  function round(value, decimals = 2) {
+    const multiplier =
+      10 ** decimals;
+
+    return (
+      Math.round(
+        (number(value) + Number.EPSILON) *
+          multiplier
+      ) / multiplier
+    );
   }
 
 
   function formatNumber(value) {
-    const rounded = round(value, 1);
+    const rounded =
+      round(value, 2);
 
-    if (Number.isInteger(rounded)) {
-      return String(rounded);
-    }
-
-    return String(rounded).replace(".", ".");
+    return rounded
+      .toString()
+      .replace(".", ",");
   }
 
 
   function escapeHTML(value) {
     return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 
 
   function getInitials(name) {
-    const text = String(name || "").trim();
+    const words =
+      String(name || "")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
 
-    if (!text) {
+    if (!words.length) {
       return "?";
     }
 
-    const words = text.split(/\s+/);
-
     if (words.length === 1) {
-      return words[0].slice(0, 2).toUpperCase();
+      return words[0]
+        .substring(0, 2)
+        .toUpperCase();
     }
 
     return (
-      words[0].charAt(0) +
-      words[1].charAt(0)
+      words[0][0] +
+      words[1][0]
     ).toUpperCase();
   }
 
 
   function normalizeProduct(product) {
-    return {
-      id: String(product.id ?? createId("product")),
-      name: String(product.name ?? "").trim(),
-      kcal: number(product.kcal),
-      protein: number(
-        product.protein ?? product.proteins
-      ),
-      fat: number(product.fat),
-      carb: number(
-        product.carb ?? product.carbs
-      ),
-      unit: product.unit === "мл" ? "мл" : "г",
-      full_name: String(
-        product.full_name ??
-        product.description ??
+    if (!product) return null;
+
+    const name =
+      String(
+        product.name ??
+        product.text ??
         ""
-      ).trim()
+      ).trim();
+
+    if (!name) return null;
+
+    return {
+      id:
+        product.id ||
+        createId(),
+
+      name,
+
+      kcal: number(
+        product.kcal
+      ),
+
+      protein: number(
+        product.protein
+      ),
+
+      fat: number(
+        product.fat
+      ),
+
+      carb: number(
+        product.carb
+      ),
+
+      unit:
+        product.unit ||
+        "г",
+
+      full_name:
+        product.full_name ??
+        product.fullName ??
+        ""
     };
+  }
+
+
+  /* =========================================================
+     ACTIVE TAB PERSISTENCE
+  ========================================================= */
+
+  function saveActiveTab(tabName) {
+    if (!tabName) return;
+
+    localStorage.setItem(
+      ACTIVE_TAB_KEY,
+      tabName
+    );
+  }
+
+
+  function loadActiveTab() {
+    const saved =
+      localStorage.getItem(
+        ACTIVE_TAB_KEY
+      );
+
+    if (
+      saved === "blocks" ||
+      saved === "calculator" ||
+      saved === "archive"
+    ) {
+      return saved;
+    }
+
+    return "blocks";
+  }
+
+
+  function setActiveTab(tabName) {
+    if (!tabName) {
+      tabName = "blocks";
+    }
+
+    tabs.forEach(tab => {
+      tab.classList.toggle(
+        "active",
+        tab.dataset.tab === tabName
+      );
+    });
+
+    pages.forEach(page => {
+      page.classList.toggle(
+        "active",
+        page.id === tabName
+      );
+    });
+
+    saveActiveTab(tabName);
+
+    if (tabName === "calculator") {
+      renderCalculator();
+    }
+
+    if (tabName === "archive") {
+      renderArchive();
+    }
+  }
+
+
+  /* =========================================================
+     CALCULATOR DRAFT PERSISTENCE
+  ========================================================= */
+
+  function saveCalculatorDraft() {
+    if (!calcInput) return;
+
+    localStorage.setItem(
+      CALCULATOR_DRAFT_KEY,
+      calcInput.value
+    );
+  }
+
+
+  function loadCalculatorDraft() {
+    if (!calcInput) return;
+
+    const draft =
+      localStorage.getItem(
+        CALCULATOR_DRAFT_KEY
+      );
+
+    if (draft !== null) {
+      calcInput.value = draft;
+    }
+  }
+
+
+  function clearCalculatorDraft() {
+    localStorage.removeItem(
+      CALCULATOR_DRAFT_KEY
+    );
+  }
+
+
+  /* =========================================================
+     SEARCH PERSISTENCE
+  ========================================================= */
+
+  function saveSearchQuery() {
+    if (!searchInput) return;
+
+    localStorage.setItem(
+      SEARCH_QUERY_KEY,
+      searchInput.value
+    );
+  }
+
+
+  function loadSearchQuery() {
+    if (!searchInput) return;
+
+    const query =
+      localStorage.getItem(
+        SEARCH_QUERY_KEY
+      ) || "";
+
+    searchInput.value = query;
+
+    if (clearSearch) {
+      clearSearch.style.display =
+        query ? "block" : "none";
+    }
   }
 
 
@@ -529,15 +685,19 @@ document.addEventListener("DOMContentLoaded", () => {
      LOCAL STORAGE
   ========================================================= */
 
-  function loadProductsFromLocal() {
+  function loadProductsLocal() {
     try {
-      const raw = localStorage.getItem(PRODUCTS_KEY);
+      const raw =
+        localStorage.getItem(
+          PRODUCTS_KEY
+        );
 
       if (!raw) {
         return [];
       }
 
-      const parsed = JSON.parse(raw);
+      const parsed =
+        JSON.parse(raw);
 
       if (!Array.isArray(parsed)) {
         return [];
@@ -545,10 +705,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       return parsed
         .map(normalizeProduct)
-        .filter(product => product.name);
+        .filter(Boolean);
     } catch (error) {
       console.error(
-        "Помилка читання локальної бази продуктів:",
+        "Помилка завантаження продуктів:",
         error
       );
 
@@ -558,38 +718,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   function saveProductsLocal() {
-    try {
-      localStorage.setItem(
-        PRODUCTS_KEY,
-        JSON.stringify(products)
-      );
-
-      return true;
-    } catch (error) {
-      console.error(
-        "Помилка збереження продуктів:",
-        error
-      );
-
-      return false;
-    }
+    localStorage.setItem(
+      PRODUCTS_KEY,
+      JSON.stringify(products)
+    );
   }
 
 
   function loadCalculatorLocal() {
     try {
-      const raw = localStorage.getItem(CALCULATOR_KEY);
+      const raw =
+        localStorage.getItem(
+          CALCULATOR_KEY
+        );
 
       if (!raw) {
         return [];
       }
 
-      const parsed = JSON.parse(raw);
+      const parsed =
+        JSON.parse(raw);
 
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed)
+        ? parsed
+        : [];
     } catch (error) {
       console.error(
-        "Помилка читання калькулятора:",
+        "Помилка завантаження калькулятора:",
         error
       );
 
@@ -601,25 +756,33 @@ document.addEventListener("DOMContentLoaded", () => {
   function saveCalculatorLocal() {
     localStorage.setItem(
       CALCULATOR_KEY,
-      JSON.stringify(calculatorItems)
+      JSON.stringify(
+        calculatorItems
+      )
     );
   }
 
 
   function loadArchiveLocal() {
     try {
-      const raw = localStorage.getItem(ARCHIVE_KEY);
+      const raw =
+        localStorage.getItem(
+          ARCHIVE_KEY
+        );
 
       if (!raw) {
         return [];
       }
 
-      const parsed = JSON.parse(raw);
+      const parsed =
+        JSON.parse(raw);
 
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed)
+        ? parsed
+        : [];
     } catch (error) {
       console.error(
-        "Помилка читання архіву:",
+        "Помилка завантаження архіву:",
         error
       );
 
@@ -631,13 +794,15 @@ document.addEventListener("DOMContentLoaded", () => {
   function saveArchiveLocal() {
     localStorage.setItem(
       ARCHIVE_KEY,
-      JSON.stringify(archiveItems)
+      JSON.stringify(
+        archiveItems
+      )
     );
   }
 
 
   /* =========================================================
-     SUPABASE SESSION
+     SUPABASE USER
   ========================================================= */
 
   async function getCurrentUser() {
@@ -649,21 +814,17 @@ document.addEventListener("DOMContentLoaded", () => {
       const {
         data,
         error
-      } = await supabaseClient.auth.getSession();
+      } =
+        await supabaseClient.auth.getUser();
 
       if (error) {
-        console.error(
-          "Supabase session error:",
-          error
-        );
-
         return null;
       }
 
-      return data?.session?.user || null;
+      return data?.user || null;
     } catch (error) {
       console.error(
-        "Supabase getSession error:",
+        "Помилка отримання користувача:",
         error
       );
 
@@ -673,321 +834,240 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   /* =========================================================
-     LOAD PRODUCTS FROM SUPABASE
+     SUPABASE LOAD PRODUCTS
   ========================================================= */
 
   async function loadProductsFromSupabase() {
     if (!supabaseClient) {
-      return null;
+      return [];
     }
 
     try {
-      const user = await getCurrentUser();
+      const user =
+        await getCurrentUser();
 
-      let query = supabaseClient
-        .from("products")
-        .select(
-          "id,name,unit,kcal,protein,fat,carbs,full_name,created_at"
-        );
-
-      if (user) {
-        query = query.eq("owner_id", user.id);
+      if (!user) {
+        return [];
       }
 
       const {
         data,
         error
-      } = await query.order(
-        "created_at",
-        {
-          ascending: true
-        }
-      );
+      } =
+        await supabaseClient
+          .from("products")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", {
+            ascending: true
+          });
 
       if (error) {
         console.error(
-          "Supabase products load error:",
+          "Помилка завантаження продуктів Supabase:",
           error
         );
 
-        return null;
-      }
-
-      if (!Array.isArray(data)) {
-        return null;
-      }
-
-      if (data.length === 0) {
         return [];
       }
 
-      return data.map(row =>
-        normalizeProduct({
-          id: row.id,
-          name: row.name,
-          unit: row.unit,
-          kcal: row.kcal,
-          protein: row.protein,
-          fat: row.fat,
-          carb: row.carbs,
-          full_name: row.full_name
-        })
-      );
+      return (data || [])
+        .map(normalizeProduct)
+        .filter(Boolean);
     } catch (error) {
       console.error(
-        "Supabase products exception:",
+        "Помилка Supabase:",
         error
       );
 
-      return null;
+      return [];
     }
   }
 
 
   /* =========================================================
-     MERGE DATABASES
+     MERGE PRODUCTS
   ========================================================= */
 
   function mergeProducts(
     localProducts,
-    cloudProducts
+    remoteProducts
   ) {
-    const result = [];
-    const map = new Map();
+    const map =
+      new Map();
 
-    for (const product of localProducts) {
-      const normalized =
-        normalizeProduct(product);
+    localProducts.forEach(product => {
+      map.set(
+        product.id,
+        product
+      );
+    });
 
-      if (!normalized.name) {
-        continue;
-      }
+    remoteProducts.forEach(product => {
+      map.set(
+        product.id,
+        product
+      );
+    });
 
-      const key =
-        normalized.id ||
-        normalized.name.toLowerCase();
-
-      map.set(key, normalized);
-      result.push(normalized);
-    }
-
-    for (const product of cloudProducts || []) {
-      const normalized =
-        normalizeProduct(product);
-
-      if (!normalized.name) {
-        continue;
-      }
-
-      const existingById =
-        map.get(normalized.id);
-
-      if (existingById) {
-        Object.assign(
-          existingById,
-          normalized
-        );
-
-        continue;
-      }
-
-      const existingByName =
-        result.find(
-          item =>
-            item.name.toLowerCase() ===
-            normalized.name.toLowerCase()
-        );
-
-      if (existingByName) {
-        Object.assign(
-          existingByName,
-          normalized
-        );
-      } else {
-        result.push(normalized);
-      }
-    }
-
-    return result;
+    return Array.from(
+      map.values()
+    );
   }
 
 
   /* =========================================================
-     SAVE PRODUCT TO SUPABASE
+     SUPABASE SAVE PRODUCT
   ========================================================= */
 
-  async function saveProductToSupabase(product) {
+  async function saveProductToSupabase(
+    product
+  ) {
     if (!supabaseClient) {
-      return false;
+      return;
     }
 
     try {
-      const user = await getCurrentUser();
+      const user =
+        await getCurrentUser();
+
+      if (!user) {
+        return;
+      }
 
       const payload = {
+        id: product.id,
+        user_id: user.id,
         name: product.name,
-        unit: product.unit || "г",
-        kcal: number(product.kcal),
-        protein: number(product.protein),
-        fat: number(product.fat),
-        carbs: number(product.carb),
-        full_name: product.full_name || ""
+        kcal: product.kcal,
+        protein: product.protein,
+        fat: product.fat,
+        carb: product.carb,
+        unit: product.unit,
+        full_name:
+          product.full_name
       };
 
-      if (user) {
-        payload.owner_id = user.id;
-      }
-
-      if (/^\d+$/.test(String(product.id))) {
-        payload.id = Number(product.id);
-      }
-
       const {
-        data,
         error
-      } = await supabaseClient
-        .from("products")
-        .upsert(
-          payload,
-          {
-            onConflict: "id"
-          }
-        )
-        .select()
-        .single();
+      } =
+        await supabaseClient
+          .from("products")
+          .upsert(
+            payload,
+            {
+              onConflict: "id"
+            }
+          );
 
       if (error) {
         console.error(
-          "Supabase product save error:",
+          "Помилка збереження продукту:",
           error
         );
-
-        return false;
       }
-
-      if (data?.id != null) {
-        product.id = String(data.id);
-        saveProductsLocal();
-      }
-
-      return true;
     } catch (error) {
       console.error(
-        "Supabase save exception:",
+        "Помилка Supabase:",
         error
       );
-
-      return false;
     }
   }
 
 
   /* =========================================================
-     DELETE PRODUCT FROM SUPABASE
+     SUPABASE DELETE PRODUCT
   ========================================================= */
 
-  async function deleteProductFromSupabase(product) {
+  async function deleteProductFromSupabase(
+    productId
+  ) {
     if (!supabaseClient) {
-      return false;
-    }
-
-    if (!/^\d+$/.test(String(product.id))) {
-      return false;
+      return;
     }
 
     try {
-      const user = await getCurrentUser();
+      const user =
+        await getCurrentUser();
 
-      let query = supabaseClient
-        .from("products")
-        .delete()
-        .eq("id", Number(product.id));
-
-      if (user) {
-        query = query.eq(
-          "owner_id",
-          user.id
-        );
+      if (!user) {
+        return;
       }
 
       const {
         error
-      } = await query;
+      } =
+        await supabaseClient
+          .from("products")
+          .delete()
+          .eq("id", productId)
+          .eq("user_id", user.id);
 
       if (error) {
         console.error(
-          "Supabase delete error:",
+          "Помилка видалення продукту:",
           error
         );
-
-        return false;
       }
-
-      return true;
     } catch (error) {
       console.error(
-        "Supabase delete exception:",
+        "Помилка Supabase:",
         error
       );
-
-      return false;
     }
   }
 
 
   /* =========================================================
-     INITIAL DATABASE LOAD
+     INITIALIZE PRODUCTS
   ========================================================= */
 
   async function initializeProducts() {
     const localProducts =
-      loadProductsFromLocal();
+      loadProductsLocal();
 
-    if (localProducts.length === 0) {
+    if (localProducts.length) {
       products =
-        DEFAULT_PRODUCTS.map(product =>
-          normalizeProduct(product)
+        localProducts;
+
+      renderProducts(
+        searchInput?.value || ""
+      );
+    } else {
+      products =
+        DEFAULT_PRODUCTS.map(
+          product =>
+            normalizeProduct(product)
         );
 
       saveProductsLocal();
-    } else {
-      products = localProducts;
+
+      renderProducts(
+        searchInput?.value || ""
+      );
     }
 
-    renderProducts();
-
-    const cloudProducts =
+    const remoteProducts =
       await loadProductsFromSupabase();
 
-    if (cloudProducts === null) {
-      console.warn(
-        "Supabase недоступний. Використовується локальна база."
+    if (remoteProducts.length) {
+      products =
+        mergeProducts(
+          products,
+          remoteProducts
+        );
+
+      saveProductsLocal();
+
+      renderProducts(
+        searchInput?.value || ""
       );
-
-      return;
     }
-
-    if (cloudProducts.length === 0) {
-      console.warn(
-        "Supabase повернув порожню базу. Локальні продукти збережено."
-      );
-
-      return;
-    }
-
-    products = mergeProducts(
-      products,
-      cloudProducts
-    );
-
-    saveProductsLocal();
-
-    renderProducts();
   }
 
 
   /* =========================================================
-     SUPABASE SYNC
+     SYNC PRODUCTS
   ========================================================= */
 
   async function syncProductsToSupabase() {
@@ -995,314 +1075,232 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const user = await getCurrentUser();
+    try {
+      const user =
+        await getCurrentUser();
 
-    if (!user) {
-      return;
+      if (!user) {
+        return;
+      }
+
+      for (const product of products) {
+        await saveProductToSupabase(
+          product
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Помилка синхронізації:",
+        error
+      );
     }
-
-    for (const product of products) {
-      await saveProductToSupabase(product);
-    }
-
-    saveProductsLocal();
   }
 
 
   /* =========================================================
-     TABS
-  ========================================================= */
-
-  tabs.forEach(tab => {
-    tab.addEventListener("click", () => {
-      const target = tab.dataset.tab;
-
-      tabs.forEach(item =>
-        item.classList.remove("active")
-      );
-
-      pages.forEach(page =>
-        page.classList.remove("active")
-      );
-
-      tab.classList.add("active");
-
-      const targetPage =
-        document.getElementById(target);
-
-      if (targetPage) {
-        targetPage.classList.add("active");
-      }
-
-      if (target === "archive") {
-        renderArchive();
-      }
-
-      if (target === "calculator") {
-        renderCalculatorLog();
-        updateTotals();
-      }
-    });
-  });
-
-
-  /* =========================================================
-     RENDER PRODUCTS
+     PRODUCT RENDER
   ========================================================= */
 
   function renderProducts(filter = "") {
-    if (!grid) {
-      return;
-    }
+    if (!grid) return;
 
-    const normalizedFilter =
-      String(filter)
+    const query =
+      String(filter || "")
         .trim()
         .toLowerCase();
 
-    grid.innerHTML = "";
-
     const filtered =
       products.filter(product => {
-        if (!normalizedFilter) {
+        if (!query) {
           return true;
         }
 
         return (
           product.name
             .toLowerCase()
-            .includes(normalizedFilter) ||
-          product.full_name
+            .includes(query) ||
+          String(
+            product.full_name || ""
+          )
             .toLowerCase()
-            .includes(normalizedFilter)
+            .includes(query)
         );
       });
 
-    if (filtered.length === 0) {
-      const empty =
-        document.createElement("div");
-
-      empty.style.gridColumn = "1 / -1";
-      empty.style.textAlign = "center";
-      empty.style.padding = "30px";
-      empty.style.color =
-        "var(--text-secondary)";
-
-      empty.textContent =
-        "Продуктів не знайдено.";
-
-      grid.appendChild(empty);
-
-      return;
-    }
+    grid.innerHTML = "";
 
     filtered.forEach(product => {
-      const card =
-        createProductCard(product);
-
-      grid.appendChild(card);
+      grid.appendChild(
+        createProductCard(product)
+      );
     });
 
-    updateReorderState();
+    if (reorderMode) {
+      enableDragAndDrop();
+    }
   }
 
 
   /* =========================================================
-     CREATE PRODUCT CARD
+     PRODUCT CARD
   ========================================================= */
 
   function createProductCard(product) {
-    const card =
+    const article =
       document.createElement("article");
 
-    card.className = "food-card";
+    article.className =
+      "food-card";
 
-    card.dataset.id =
-      String(product.id);
+    article.dataset.id =
+      product.id;
 
-    card.dataset.text =
-      product.name;
+    article.draggable =
+      reorderMode;
 
-    card.dataset.kcal =
-      String(product.kcal);
+    article.innerHTML = `
+      <div
+        class="copy-btn"
+        title="Скопіювати блок"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M9 9V5.8C9 4.80589 9.80589 4 10.8 4H18.2C19.1941 4 20 4.80589 20 5.8V13.2C20 14.1941 19.1941 15 18.2 15H15"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <rect
+            x="4"
+            y="9"
+            width="11"
+            height="11"
+            rx="1.8"
+            stroke="currentColor"
+            stroke-width="2"
+          />
+        </svg>
 
-    card.dataset.protein =
-      String(product.protein);
+        <span class="tooltip">
+          Скопіювати
+        </span>
+      </div>
 
-    card.dataset.fat =
-      String(product.fat);
+      <div class="food-title">
 
-    card.dataset.carb =
-      String(product.carb);
+        <div class="badge">
+          ${escapeHTML(
+            getInitials(product.name)
+          )}
+        </div>
 
+        <div>
+          <div class="name">
+            ${escapeHTML(product.name)}
+          </div>
+
+          <div class="meta">
+            на 100 ${escapeHTML(
+              product.unit || "г"
+            )}
+          </div>
+        </div>
+
+      </div>
+
+      <div class="kbjv">
+
+        <div class="row">
+          <span class="key">
+            Ккал
+          </span>
+
+          <span class="val">
+            ${formatNumber(product.kcal)}
+          </span>
+        </div>
+
+        <div class="row">
+          <span class="key">
+            Білки
+          </span>
+
+          <span class="val">
+            ${formatNumber(product.protein)} г
+          </span>
+        </div>
+
+        <div class="row">
+          <span class="key">
+            Жири
+          </span>
+
+          <span class="val">
+            ${formatNumber(product.fat)} г
+          </span>
+        </div>
+
+        <div class="row">
+          <span class="key">
+            Вуглеводи
+          </span>
+
+          <span class="val">
+            ${formatNumber(product.carb)} г
+          </span>
+        </div>
+
+      </div>
+
+      ${
+        product.full_name
+          ? `
+            <div class="full-name">
+              ${escapeHTML(
+                product.full_name
+              )}
+            </div>
+          `
+          : ""
+      }
+    `;
 
     const copyButton =
-      document.createElement("div");
-
-    copyButton.className =
-      "copy-btn";
-
-    copyButton.title =
-      "Скопіювати блок";
-
-    copyButton.innerHTML = `
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M16 21H6a2 2 0 0 1-2-2V7"
-          stroke="currentColor"
-          stroke-width="1.6"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-
-        <rect
-          x="8"
-          y="3"
-          width="13"
-          height="13"
-          rx="2"
-          stroke="currentColor"
-          stroke-width="1.6"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
-
-      <span class="tooltip">
-        Скопійовано
-      </span>
-    `;
+      article.querySelector(
+        ".copy-btn"
+      );
 
     copyButton.addEventListener(
       "click",
       event => {
         event.stopPropagation();
 
-        openProductModal(product);
-      }
-    );
-
-
-    const title =
-      document.createElement("div");
-
-    title.className =
-      "food-title";
-
-    title.style.paddingRight =
-      "50px";
-
-
-    const badge =
-      document.createElement("div");
-
-    badge.className =
-      "badge";
-
-    badge.textContent =
-      getInitials(product.name);
-
-
-    const titleContent =
-      document.createElement("div");
-
-
-    const name =
-      document.createElement("div");
-
-    name.className =
-      "name";
-
-    name.textContent =
-      product.name;
-
-
-    const meta =
-      document.createElement("div");
-
-    meta.className =
-      "meta";
-
-    meta.textContent =
-      `100 ${product.unit || "г"}`;
-
-
-    titleContent.appendChild(name);
-    titleContent.appendChild(meta);
-
-    title.appendChild(badge);
-    title.appendChild(titleContent);
-
-
-    const kbjv =
-      document.createElement("div");
-
-    kbjv.className =
-      "kbjv";
-
-    kbjv.innerHTML = `
-      <div class="row">
-        <div class="key">Калорії</div>
-        <div class="val">
-          ${formatNumber(product.kcal)} ккал
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="key">Білки</div>
-        <div class="val">
-          ${formatNumber(product.protein)} г
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="key">Жири</div>
-        <div class="val">
-          ${formatNumber(product.fat)} г
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="key">Вуглеводи</div>
-        <div class="val">
-          ${formatNumber(product.carb)} г
-        </div>
-      </div>
-    `;
-
-
-    const fullName =
-      document.createElement("div");
-
-    fullName.className =
-      "full-name";
-
-    fullName.textContent =
-      product.full_name || "";
-
-
-    card.appendChild(copyButton);
-    card.appendChild(title);
-    card.appendChild(kbjv);
-    card.appendChild(fullName);
-
-
-    card.addEventListener(
-      "click",
-      event => {
         if (reorderMode) {
           return;
         }
 
+        openProductModal(product);
+      }
+    );
+
+    article.addEventListener(
+      "click",
+      event => {
         if (
-          event.target.closest(".copy-btn")
+          event.target.closest(
+            ".copy-btn"
+          )
         ) {
+          return;
+        }
+
+        if (reorderMode) {
           return;
         }
 
@@ -1310,8 +1308,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
 
-
-    return card;
+    return article;
   }
 
 
@@ -1323,6 +1320,8 @@ document.addEventListener("DOMContentLoaded", () => {
     searchInput.addEventListener(
       "input",
       () => {
+        saveSearchQuery();
+
         renderProducts(
           searchInput.value
         );
@@ -1342,14 +1341,16 @@ document.addEventListener("DOMContentLoaded", () => {
     clearSearch.addEventListener(
       "click",
       () => {
+        if (!searchInput) return;
+
         searchInput.value = "";
+
+        saveSearchQuery();
 
         clearSearch.style.display =
           "none";
 
-        renderProducts();
-
-        searchInput.focus();
+        renderProducts("");
       }
     );
   }
@@ -1360,140 +1361,154 @@ document.addEventListener("DOMContentLoaded", () => {
   ========================================================= */
 
   function openProductModal(product) {
-    selectedProduct = product;
+    selectedProduct =
+      product;
 
-    if (productModalName) {
-      productModalName.textContent =
-        product.name;
-    }
+    productModalName.textContent =
+      product.name;
 
-    if (productWeight) {
-      productWeight.value = "100";
-    }
+    productWeight.value =
+      "100";
 
-    if (productModal) {
-      productModal.classList.add("active");
-    }
+    clearButtonStatus(
+      productCancel
+    );
+
+    clearButtonStatus(
+      productCopy
+    );
+
+    clearButtonStatus(
+      productCalculator
+    );
+
+    productModal.classList.add(
+      "active"
+    );
+
+    setTimeout(() => {
+      productWeight.focus();
+      productWeight.select();
+    }, 0);
   }
 
 
   function closeProductModal() {
-    selectedProduct = null;
+    productModal.classList.remove(
+      "active"
+    );
 
-    if (productModal) {
-      productModal.classList.remove("active");
-    }
+    selectedProduct =
+      null;
   }
 
 
-  /* =========================================================
-     PRODUCT CANCEL
-  ========================================================= */
+  productCancel?.addEventListener(
+    "click",
+    () => {
+      showButtonState(
+        productCancel,
+        "Скасовано",
+        "error",
+        900
+      );
 
-  if (productCancel) {
-    productCancel.addEventListener(
-      "click",
-      () => {
+      setTimeout(() => {
         closeProductModal();
+      }, 350);
+    }
+  );
 
+
+  productModal?.addEventListener(
+    "click",
+    event => {
+      if (
+        event.target ===
+        productModal
+      ) {
         showButtonState(
           productCancel,
           "Скасовано",
           "error",
-          1500
+          900
         );
-      }
-    );
-  }
 
-
-  if (productModal) {
-    productModal.addEventListener(
-      "click",
-      event => {
-        if (
-          event.target === productModal
-        ) {
+        setTimeout(() => {
           closeProductModal();
-
-          showButtonState(
-            productCancel,
-            "Скасовано",
-            "error",
-            1500
-          );
-        }
+        }, 350);
       }
-    );
-  }
+    }
+  );
 
 
-  /* =========================================================
-     CALCULATE PRODUCT WEIGHT
-  ========================================================= */
-
-  function calculateProduct(
-    product,
-    weight
-  ) {
+  function calculateProduct(product, weight) {
     const multiplier =
       number(weight) / 100;
 
     return {
-      kcal:
-        product.kcal * multiplier,
+      kcal: round(
+        product.kcal *
+          multiplier
+      ),
 
-      protein:
-        product.protein * multiplier,
+      protein: round(
+        product.protein *
+          multiplier
+      ),
 
-      fat:
-        product.fat * multiplier,
+      fat: round(
+        product.fat *
+          multiplier
+      ),
 
-      carb:
-        product.carb * multiplier
+      carb: round(
+        product.carb *
+          multiplier
+      )
     };
   }
 
 
-  /* =========================================================
-     COPY
-  ========================================================= */
-
   async function copyText(text) {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(
+        text
+      );
 
       return true;
     } catch (error) {
       try {
         const textarea =
-          document.createElement("textarea");
+          document.createElement(
+            "textarea"
+          );
 
-        textarea.value = text;
+        textarea.value =
+          text;
 
         textarea.style.position =
           "fixed";
 
-        textarea.style.left =
-          "-9999px";
+        textarea.style.opacity =
+          "0";
 
         document.body.appendChild(
           textarea
         );
 
+        textarea.focus();
         textarea.select();
 
-        document.execCommand("copy");
+        const result =
+          document.execCommand(
+            "copy"
+          );
 
         textarea.remove();
 
-        return true;
-      } catch (fallbackError) {
-        console.error(
-          "Clipboard error:",
-          fallbackError
-        );
-
+        return result;
+      } catch {
         return false;
       }
     }
@@ -1504,147 +1519,122 @@ document.addEventListener("DOMContentLoaded", () => {
     product,
     weight
   ) {
-    const values =
+    const calculated =
       calculateProduct(
         product,
         weight
       );
 
-    return `${product.name}, для ${formatNumber(weight)} грам - ${formatNumber(values.kcal)} ккал / ${formatNumber(values.protein)} білка / ${formatNumber(values.fat)} жирів / ${formatNumber(values.carb)} вуглеводів`;
+    return `${product.name}, для ${formatNumber(weight)} грам - ${formatNumber(calculated.kcal)} ккал / ${formatNumber(calculated.protein)} білка / ${formatNumber(calculated.fat)} жирів / ${formatNumber(calculated.carb)} вуглеводів`;
   }
 
 
-  if (productCopy) {
-    productCopy.addEventListener(
-      "click",
-      async () => {
-        if (!selectedProduct) {
-          return;
-        }
-
-        const weight =
-          number(productWeight.value);
-
-        if (weight <= 0) {
-          productWeight.focus();
-
-          return;
-        }
-
-        const text =
-          getProductSummary(
-            selectedProduct,
-            weight
-          );
-
-        const success =
-          await copyText(text);
-
-        if (success) {
-          productCopy.classList.add(
-            "success"
-          );
-
-          productCopy.textContent =
-            "Скопійовано ✓";
-
-          setTimeout(() => {
-            if (productCopy) {
-              productCopy.classList.remove(
-                "success"
-              );
-
-              productCopy.textContent =
-                "Скопіювати";
-            }
-          }, 1200);
-        }
+  productCopy?.addEventListener(
+    "click",
+    async () => {
+      if (!selectedProduct) {
+        return;
       }
-    );
-  }
 
+      const weight =
+        number(
+          productWeight.value
+        );
 
-  /* =========================================================
-     PRODUCT -> CALCULATOR
-  ========================================================= */
-
-  if (productCalculator) {
-    productCalculator.addEventListener(
-      "click",
-      () => {
-        if (!selectedProduct) {
-          return;
-        }
-
-        const weight =
-          number(productWeight.value);
-
-        if (weight <= 0) {
-          productWeight.focus();
-
-          return;
-        }
-
-        const text =
-          getProductSummary(
-            selectedProduct,
-            weight
-          );
-
-        /*
-         * НЕ перезаписуємо попередній текст.
-         *
-         * Якщо поле вже має дані:
-         *
-         * Яйця...
-         *
-         * то наступний продукт буде:
-         *
-         * Яйця...
-         * Молоко...
-         *
-         * тобто автоматично з нового рядка.
-         */
-        if (calcInput) {
-          const currentText =
-            calcInput.value.trim();
-
-          calcInput.value =
-            currentText
-              ? `${currentText}\n${text}`
-              : text;
-
-          /*
-           * Ставимо курсор у кінець поля.
-           * Це аналог переходу на новий рядок
-           * після Enter.
-           */
-          calcInput.focus();
-
-          calcInput.setSelectionRange(
-            calcInput.value.length,
-            calcInput.value.length
-          );
-
-          /*
-           * Прокручуємо textarea вниз,
-           * якщо рядків стало багато.
-           */
-          calcInput.scrollTop =
-            calcInput.scrollHeight;
-        }
-
-        closeProductModal();
-
+      if (weight <= 0) {
         showButtonState(
-          productCalculator,
-          "Додано",
+          productCopy,
+          "Некоректна вага",
+          "error",
+          1200
+        );
+
+        return;
+      }
+
+      const text =
+        getProductSummary(
+          selectedProduct,
+          weight
+        );
+
+      const success =
+        await copyText(text);
+
+      if (success) {
+        showButtonState(
+          productCopy,
+          "Скопійовано",
           "success",
-          1500
+          1200
+        );
+      } else {
+        showButtonState(
+          productCopy,
+          "Помилка",
+          "error",
+          1200
         );
       }
-    );
-  }
+    }
+  );
+
+
+  productCalculator?.addEventListener(
+    "click",
+    () => {
+      if (!selectedProduct) {
+        return;
+      }
+
+      const weight =
+        number(
+          productWeight.value
+        );
+
+      if (weight <= 0) {
+        showButtonState(
+          productCalculator,
+          "Некоректна вага",
+          "error",
+          1200
+        );
+
+        return;
+      }
+
+      const text =
+        getProductSummary(
+          selectedProduct,
+          weight
+        );
+
+      if (
+        calcInput.value.trim()
+      ) {
+        calcInput.value +=
+          "\n" + text;
+      } else {
+        calcInput.value =
+          text;
+      }
+
+      // ВАЖЛИВО:
+      // одразу зберігаємо змінений текст
+      saveCalculatorDraft();
+
+      showButtonState(
+        productCalculator,
+        "Додано",
+        "success",
+        1200
+      );
+
+      setTimeout(() => {
+        closeProductModal();
+      }, 300);
+    }
+  );
 
 
   /* =========================================================
@@ -1659,13 +1649,21 @@ document.addEventListener("DOMContentLoaded", () => {
     newProductCarb.value = "";
     newProductDescription.value = "";
 
+    clearButtonStatus(
+      addProductCancel
+    );
+
+    clearButtonStatus(
+      addProductSave
+    );
+
     addProductModal.classList.add(
       "active"
     );
 
     setTimeout(() => {
       newProductName.focus();
-    }, 50);
+    }, 0);
   }
 
 
@@ -1676,154 +1674,133 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-  if (addProductButton) {
-    addProductButton.addEventListener(
-      "click",
-      openAddProductModal
-    );
-  }
+  addProductButton?.addEventListener(
+    "click",
+    openAddProductModal
+  );
 
 
-  /* =========================================================
-     ADD PRODUCT CANCEL
-  ========================================================= */
+  addProductCancel?.addEventListener(
+    "click",
+    () => {
+      showButtonState(
+        addProductCancel,
+        "Скасовано",
+        "error",
+        900
+      );
 
-  if (addProductCancel) {
-    addProductCancel.addEventListener(
-      "click",
-      () => {
+      setTimeout(() => {
         closeAddProductModal();
+      }, 350);
+    }
+  );
 
+
+  addProductModal?.addEventListener(
+    "click",
+    event => {
+      if (
+        event.target ===
+        addProductModal
+      ) {
         showButtonState(
-          addProductSave,
+          addProductCancel,
           "Скасовано",
           "error",
-          1500
+          900
         );
 
-        showButtonState(
-          addProductButton,
-          "Продукт не додано",
-          "error",
-          1500
-        );
-      }
-    );
-  }
-
-
-  if (addProductModal) {
-    addProductModal.addEventListener(
-      "click",
-      event => {
-        if (
-          event.target ===
-          addProductModal
-        ) {
+        setTimeout(() => {
           closeAddProductModal();
-
-          showButtonState(
-            addProductSave,
-            "Скасовано",
-            "error",
-            1500
-          );
-
-          showButtonState(
-            addProductButton,
-            "Продукт не додано",
-            "error",
-            1500
-          );
-        }
+        }, 350);
       }
+    }
+  );
+
+
+  async function saveNewProduct() {
+    const name =
+      newProductName.value.trim();
+
+    if (!name) {
+      showButtonState(
+        addProductSave,
+        "Введіть назву",
+        "error",
+        1200
+      );
+
+      return;
+    }
+
+    const product = {
+      id: createId(),
+
+      name,
+
+      kcal: number(
+        newProductKcal.value
+      ),
+
+      protein: number(
+        newProductProtein.value
+      ),
+
+      fat: number(
+        newProductFat.value
+      ),
+
+      carb: number(
+        newProductCarb.value
+      ),
+
+      unit: "г",
+
+      full_name:
+        newProductDescription.value.trim()
+    };
+
+    products.push(product);
+
+    saveProductsLocal();
+
+    renderProducts(
+      searchInput?.value || ""
     );
+
+    showButtonState(
+      addProductSave,
+      "Збережено",
+      "success",
+      1200
+    );
+
+    showButtonState(
+      addProductButton,
+      "Додано",
+      "success",
+      1200
+    );
+
+    await saveProductToSupabase(
+      product
+    );
+
+    setTimeout(() => {
+      closeAddProductModal();
+    }, 350);
   }
 
 
-  /* =========================================================
-     ADD PRODUCT SAVE
-  ========================================================= */
-
-  if (addProductSave) {
-    addProductSave.addEventListener(
-      "click",
-      async () => {
-        const name =
-          newProductName.value.trim();
-
-        if (!name) {
-          newProductName.focus();
-
-          return;
-        }
-
-        const product = {
-          id: createId("product"),
-          name,
-          kcal: number(
-            newProductKcal.value
-          ),
-          protein: number(
-            newProductProtein.value
-          ),
-          fat: number(
-            newProductFat.value
-          ),
-          carb: number(
-            newProductCarb.value
-          ),
-          unit: "г",
-          full_name:
-            newProductDescription.value.trim()
-        };
-
-
-        products.push(product);
-
-        saveProductsLocal();
-
-        renderProducts(
-          searchInput?.value || ""
-        );
-
-        closeAddProductModal();
-
-
-        showButtonState(
-          addProductSave,
-          "Збережено",
-          "success",
-          1500
-        );
-
-        showButtonState(
-          addProductButton,
-          "Продукт додано",
-          "success",
-          1500
-        );
-
-
-        const cloudSaved =
-          await saveProductToSupabase(
-            product
-          );
-
-        if (cloudSaved) {
-          saveProductsLocal();
-
-          renderProducts(
-            searchInput?.value || ""
-          );
-        }
-      }
-    );
-  }
+  addProductSave?.addEventListener(
+    "click",
+    saveNewProduct
+  );
 
 
   /* =========================================================
-     DELETE PRODUCT MODAL
+     DELETE PRODUCT
   ========================================================= */
 
   function openDeleteProductModal() {
@@ -1842,131 +1819,63 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-  if (deleteProductButton) {
-    deleteProductButton.addEventListener(
-      "click",
-      openDeleteProductModal
-    );
-  }
-
-
-  /* =========================================================
-     DELETE PRODUCT CANCEL
-  ========================================================= */
-
-  if (deleteProductCancel) {
-    deleteProductCancel.addEventListener(
-      "click",
-      () => {
-        closeDeleteProductModal();
-
-        showButtonState(
-          deleteProductButton,
-          "Продукт не видалено",
-          "error",
-          1500
-        );
-      }
-    );
-  }
-
-
-  if (deleteProductModal) {
-    deleteProductModal.addEventListener(
-      "click",
-      event => {
-        if (
-          event.target ===
-          deleteProductModal
-        ) {
-          closeDeleteProductModal();
-
-          showButtonState(
-            deleteProductButton,
-            "Продукт не видалено",
-            "error",
-            1500
-          );
-        }
-      }
-    );
-  }
-
-
-  /* =========================================================
-     DELETE PRODUCT LIST
-  ========================================================= */
-
   function renderDeleteProductList() {
     deleteProductList.innerHTML = "";
 
-    if (products.length === 0) {
+    if (!products.length) {
       deleteProductList.innerHTML = `
         <div class="delete-product-empty">
-          База продуктів порожня.
+          Немає продуктів для видалення
         </div>
       `;
 
       return;
     }
 
-
     products.forEach(product => {
       const item =
-        document.createElement("div");
+        document.createElement(
+          "div"
+        );
 
       item.className =
         "delete-product-item";
 
+      item.innerHTML = `
+        <div class="delete-product-item-name">
+          ${escapeHTML(product.name)}
+        </div>
 
-      const name =
-        document.createElement("div");
-
-      name.className =
-        "delete-product-item-name";
-
-      name.textContent =
-        product.name;
-
+        <button
+          type="button"
+          class="delete-product-item-button"
+        >
+          Видалити
+        </button>
+      `;
 
       const button =
-        document.createElement("button");
-
-      button.type = "button";
-
-      button.className =
-        "delete-product-item-button";
-
-      button.textContent =
-        "Видалити";
-
+        item.querySelector(
+          ".delete-product-item-button"
+        );
 
       button.addEventListener(
         "click",
         async () => {
           const confirmed =
             confirm(
-              `Видалити продукт "${product.name}"?`
+              `Видалити продукт «${product.name}»?`
             );
-
 
           if (!confirmed) {
-            showButtonState(
-              deleteProductButton,
-              "Скасовано",
-              "error",
-              1500
-            );
-
             return;
           }
-
 
           products =
             products.filter(
               item =>
-                String(item.id) !==
-                String(product.id)
+                item.id !==
+                product.id
             );
 
           saveProductsLocal();
@@ -1977,111 +1886,56 @@ document.addEventListener("DOMContentLoaded", () => {
 
           renderDeleteProductList();
 
-
           await deleteProductFromSupabase(
-            product
+            product.id
           );
-
 
           showButtonState(
             deleteProductButton,
-            "Продукт видалено",
+            "Видалено",
             "success",
-            1500
+            1200
           );
         }
       );
 
-
-      item.appendChild(name);
-      item.appendChild(button);
-
-      deleteProductList.appendChild(item);
+      deleteProductList.appendChild(
+        item
+      );
     });
   }
+
+
+  deleteProductButton?.addEventListener(
+    "click",
+    openDeleteProductModal
+  );
+
+
+  deleteProductCancel?.addEventListener(
+    "click",
+    closeDeleteProductModal
+  );
+
+
+  deleteProductModal?.addEventListener(
+    "click",
+    event => {
+      if (
+        event.target ===
+        deleteProductModal
+      ) {
+        closeDeleteProductModal();
+      }
+    }
+  );
 
 
   /* =========================================================
      REORDER PRODUCTS
   ========================================================= */
 
-  if (reorderProductsButton) {
-    reorderProductsButton.addEventListener(
-      "click",
-      () => {
-
-        if (!reorderMode) {
-          reorderMode = true;
-          reorderChanged = false;
-
-          setButtonStatusPermanent(
-            reorderProductsButton,
-            "Завершити зміну розташування?",
-            "info"
-          );
-
-          updateReorderState();
-
-          return;
-        }
-
-
-        reorderMode = false;
-
-        updateReorderState();
-
-
-        if (reorderChanged) {
-          showButtonState(
-            reorderProductsButton,
-            "Розташування змінено",
-            "success",
-            1800
-          );
-        } else {
-          showButtonState(
-            reorderProductsButton,
-            "Розташування не змінено",
-            "error",
-            1800
-          );
-        }
-      }
-    );
-  }
-
-
-  function updateReorderState() {
-    if (!grid) {
-      return;
-    }
-
-    grid.classList.toggle(
-      "reorder-mode",
-      reorderMode
-    );
-
-    reorderHint?.classList.toggle(
-      "active",
-      reorderMode
-    );
-
-
-    if (
-      reorderMode &&
-      reorderProductsButton &&
-      !reorderProductsButton.classList.contains(
-        "button-status-info"
-      )
-    ) {
-      setButtonStatusPermanent(
-        reorderProductsButton,
-        "Завершити зміну розташування?",
-        "info"
-      );
-    }
-
-
+  function enableDragAndDrop() {
     const cards =
       grid.querySelectorAll(
         ".food-card"
@@ -2091,467 +1945,431 @@ document.addEventListener("DOMContentLoaded", () => {
       card.draggable =
         reorderMode;
 
-      if (reorderMode) {
-        attachDragEvents(card);
-      } else {
-        card.ondragstart = null;
-        card.ondragend = null;
-        card.ondragover = null;
-        card.ondragleave = null;
-        card.ondrop = null;
+      if (!reorderMode) {
+        return;
       }
+
+      card.addEventListener(
+        "dragstart",
+        handleDragStart
+      );
+
+      card.addEventListener(
+        "dragover",
+        handleDragOver
+      );
+
+      card.addEventListener(
+        "dragleave",
+        handleDragLeave
+      );
+
+      card.addEventListener(
+        "drop",
+        handleDrop
+      );
+
+      card.addEventListener(
+        "dragend",
+        handleDragEnd
+      );
     });
   }
 
 
-  function attachDragEvents(card) {
-    card.ondragstart = event => {
-      if (!reorderMode) {
-        event.preventDefault();
-
-        return;
-      }
-
-      draggedCard = card;
-
-      card.classList.add(
-        "dragging"
-      );
-
-      event.dataTransfer.effectAllowed =
-        "move";
-
-      event.dataTransfer.setData(
-        "text/plain",
-        card.dataset.id
-      );
-    };
-
-
-    card.ondragend = () => {
-      card.classList.remove(
-        "dragging"
-      );
-
-      grid
-        .querySelectorAll(
-          ".food-card"
-        )
-        .forEach(item =>
-          item.classList.remove(
-            "drag-over"
-          )
-        );
-
-      draggedCard = null;
-    };
-
-
-    card.ondragover = event => {
-      if (!reorderMode) {
-        return;
-      }
-
+  function handleDragStart(event) {
+    if (!reorderMode) {
       event.preventDefault();
+      return;
+    }
 
-      if (
-        !draggedCard ||
-        draggedCard === card
-      ) {
-        return;
-      }
+    draggedCard =
+      event.currentTarget;
 
-      card.classList.add(
-        "drag-over"
+    draggedCard.classList.add(
+      "dragging"
+    );
+
+    event.dataTransfer.effectAllowed =
+      "move";
+
+    event.dataTransfer.setData(
+      "text/plain",
+      draggedCard.dataset.id
+    );
+  }
+
+
+  function handleDragOver(event) {
+    if (!reorderMode) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const card =
+      event.currentTarget;
+
+    if (
+      card === draggedCard
+    ) {
+      return;
+    }
+
+    card.classList.add(
+      "drag-over"
+    );
+
+    event.dataTransfer.dropEffect =
+      "move";
+  }
+
+
+  function handleDragLeave(event) {
+    event.currentTarget.classList.remove(
+      "drag-over"
+    );
+  }
+
+
+  function handleDrop(event) {
+    if (!reorderMode) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const targetCard =
+      event.currentTarget;
+
+    targetCard.classList.remove(
+      "drag-over"
+    );
+
+    if (
+      !draggedCard ||
+      draggedCard === targetCard
+    ) {
+      return;
+    }
+
+    const draggedId =
+      draggedCard.dataset.id;
+
+    const targetId =
+      targetCard.dataset.id;
+
+    const draggedIndex =
+      products.findIndex(
+        product =>
+          product.id ===
+          draggedId
       );
-    };
 
-
-    card.ondragleave = () => {
-      card.classList.remove(
-        "drag-over"
-      );
-    };
-
-
-    card.ondrop = event => {
-      if (!reorderMode) {
-        return;
-      }
-
-      event.preventDefault();
-
-      card.classList.remove(
-        "drag-over"
+    const targetIndex =
+      products.findIndex(
+        product =>
+          product.id ===
+          targetId
       );
 
-      if (
-        !draggedCard ||
-        draggedCard === card
-      ) {
-        return;
-      }
+    if (
+      draggedIndex === -1 ||
+      targetIndex === -1
+    ) {
+      return;
+    }
 
-      const draggedId =
-        String(
-          draggedCard.dataset.id
-        );
-
-      const targetId =
-        String(
-          card.dataset.id
-        );
-
-      const fromIndex =
-        products.findIndex(
-          item =>
-            String(item.id) ===
-            draggedId
-        );
-
-      const toIndex =
-        products.findIndex(
-          item =>
-            String(item.id) ===
-            targetId
-        );
-
-      if (
-        fromIndex === -1 ||
-        toIndex === -1
-      ) {
-        return;
-      }
-
-
-      const [
-        movedProduct
-      ] = products.splice(
-        fromIndex,
+    const [
+      movedProduct
+    ] =
+      products.splice(
+        draggedIndex,
         1
       );
 
-      products.splice(
-        toIndex,
-        0,
-        movedProduct
+    products.splice(
+      targetIndex,
+      0,
+      movedProduct
+    );
+
+    reorderChanged = true;
+
+    saveProductsLocal();
+
+    renderProducts(
+      searchInput?.value || ""
+    );
+  }
+
+
+  function handleDragEnd() {
+    if (draggedCard) {
+      draggedCard.classList.remove(
+        "dragging"
       );
+    }
+
+    grid
+      .querySelectorAll(
+        ".drag-over"
+      )
+      .forEach(card => {
+        card.classList.remove(
+          "drag-over"
+        );
+      });
+
+    draggedCard = null;
+  }
 
 
-      reorderChanged = true;
+  reorderProductsButton?.addEventListener(
+    "click",
+    () => {
+      if (!reorderMode) {
+        reorderMode = true;
+        reorderChanged = false;
 
-      saveProductsLocal();
+        grid.classList.add(
+          "reorder-mode"
+        );
+
+        setButtonStatusPermanent(
+          reorderProductsButton,
+          "Завершити зміну розташування?",
+          "info"
+        );
+
+        renderProducts(
+          searchInput?.value || ""
+        );
+
+        return;
+      }
+
+      reorderMode = false;
+
+      grid.classList.remove(
+        "reorder-mode"
+      );
 
       renderProducts(
         searchInput?.value || ""
       );
 
+      if (reorderChanged) {
+        showButtonState(
+          reorderProductsButton,
+          "Збережено",
+          "success",
+          1200
+        );
+      }
 
-      setButtonStatusPermanent(
-        reorderProductsButton,
-        "Завершити зміну розташування?",
-        "info"
-      );
-    };
-  }
+      reorderChanged = false;
+    }
+  );
 
 
   /* =========================================================
      EXPORT DATABASE
   ========================================================= */
 
-  if (exportButton) {
-    exportButton.addEventListener(
-      "click",
-      () => {
-
-        const confirmed =
-          confirm(
-            `Експортувати базу продуктів?\n\nБуде експортовано ${products.length} продуктів.`
-          );
-
-
-        if (!confirmed) {
-          showButtonState(
-            exportButton,
-            "Не експортовано",
-            "error",
-            1800
-          );
-
-          return;
-        }
-
-
-        const exportData = {
-          version: 1,
-
-          exported_at:
-            new Date().toISOString(),
-
-          products:
-            products.map(
-              product =>
-                normalizeProduct(product)
-            )
-        };
-
-
-        const json =
-          JSON.stringify(
-            exportData,
-            null,
-            2
-          );
-
-
-        const blob =
-          new Blob(
-            [json],
-            {
-              type:
-                "application/json"
-            }
-          );
-
-
-        const url =
-          URL.createObjectURL(
-            blob
-          );
-
-
-        const link =
-          document.createElement("a");
-
-        link.href = url;
-
-
-        const date =
-          new Date()
-            .toISOString()
-            .slice(0, 10);
-
-
-        link.download =
-          `kbjv-database-${date}.json`;
-
-
-        document.body.appendChild(
-          link
-        );
-
-        link.click();
-
-        link.remove();
-
-        URL.revokeObjectURL(url);
-
-
+  exportProductsButton?.addEventListener(
+    "click",
+    () => {
+      if (!products.length) {
         showButtonState(
-          exportButton,
-          "Експортовано",
-          "success",
-          1800
+          exportProductsButton,
+          "База порожня",
+          "error",
+          1200
         );
+
+        return;
       }
-    );
-  }
+
+      const confirmed =
+        confirm(
+          "Експортувати всю базу продуктів?"
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      const data = {
+        version: 1,
+
+        exported_at:
+          new Date().toISOString(),
+
+        products
+      };
+
+      const blob =
+        new Blob(
+          [
+            JSON.stringify(
+              data,
+              null,
+              2
+            )
+          ],
+          {
+            type:
+              "application/json"
+          }
+        );
+
+      const url =
+        URL.createObjectURL(
+          blob
+        );
+
+      const link =
+        document.createElement(
+          "a"
+        );
+
+      const date =
+        new Date()
+          .toISOString()
+          .slice(0, 10);
+
+      link.href = url;
+
+      link.download =
+        `kbjv-database-${date}.json`;
+
+      document.body.appendChild(
+        link
+      );
+
+      link.click();
+
+      link.remove();
+
+      URL.revokeObjectURL(
+        url
+      );
+
+      showButtonState(
+        exportProductsButton,
+        "Експортовано",
+        "success",
+        1200
+      );
+    }
+  );
 
 
   /* =========================================================
      IMPORT DATABASE
   ========================================================= */
 
-  let importDialogOpened = false;
-
-  if (importButton) {
-    importButton.addEventListener(
-      "click",
-      () => {
-        importDialogOpened = true;
-
-        importFile?.click();
-      }
-    );
-  }
-
-
-  window.addEventListener(
-    "focus",
+  importProductsButton?.addEventListener(
+    "click",
     () => {
-      if (!importDialogOpened) {
-        return;
-      }
-
-      setTimeout(() => {
-        if (!importFile) {
-          return;
-        }
-
-        if (
-          !importFile.files ||
-          importFile.files.length === 0
-        ) {
-          showButtonState(
-            importButton,
-            "Не імпортовано",
-            "error",
-            1500
-          );
-        }
-
-        importDialogOpened = false;
-      }, 150);
+      importFile?.click();
     }
   );
 
 
-  if (importFile) {
-    importFile.addEventListener(
-      "change",
-      async () => {
-        const file =
-          importFile.files?.[0];
+  importFile?.addEventListener(
+    "change",
+    event => {
+      const file =
+        event.target.files?.[0];
 
+      if (!file) {
+        return;
+      }
 
-        if (!file) {
-          showButtonState(
-            importButton,
-            "Не імпортовано",
-            "error",
-            1500
-          );
+      const reader =
+        new FileReader();
 
-          importDialogOpened = false;
-          return;
-        }
-
-
-        try {
-          const text =
-            await file.text();
-
-          const parsed =
-            JSON.parse(text);
-
-
-          let importedProducts = null;
-
-
-          if (
-            Array.isArray(
-              parsed
-            )
-          ) {
-            importedProducts =
-              parsed;
-
-          } else if (
-            Array.isArray(
-              parsed.products
-            )
-          ) {
-            importedProducts =
-              parsed.products;
-          }
-
-
-          if (
-            !Array.isArray(
-              importedProducts
-            )
-          ) {
-            throw new Error(
-              "Невірний формат JSON."
-            );
-          }
-
-
-          const normalized =
-            importedProducts
-              .map(normalizeProduct)
-              .filter(
-                product =>
-                  product.name
+      reader.onload =
+        async () => {
+          try {
+            const parsed =
+              JSON.parse(
+                reader.result
               );
 
+            const imported =
+              Array.isArray(parsed)
+                ? parsed
+                : parsed?.products;
 
-          if (
-            normalized.length === 0
-          ) {
-            throw new Error(
-              "У файлі немає продуктів."
+            if (
+              !Array.isArray(
+                imported
+              )
+            ) {
+              throw new Error(
+                "Невірний формат бази"
+              );
+            }
+
+            const normalized =
+              imported
+                .map(normalizeProduct)
+                .filter(Boolean);
+
+            if (!normalized.length) {
+              throw new Error(
+                "Файл не містить продуктів"
+              );
+            }
+
+            const confirmed =
+              confirm(
+                `Замінити поточну базу продуктів імпортованою? Продуктів: ${normalized.length}`
+              );
+
+            if (!confirmed) {
+              return;
+            }
+
+            products =
+              normalized;
+
+            saveProductsLocal();
+
+            renderProducts(
+              searchInput?.value || ""
             );
-          }
 
-
-          const confirmed =
-            confirm(
-              `Імпортувати ${normalized.length} продуктів?\n\nПоточна локальна база буде замінена імпортованою.`
-            );
-
-
-          if (!confirmed) {
-            importFile.value = "";
+            await syncProductsToSupabase();
 
             showButtonState(
-              importButton,
-              "Не імпортовано",
+              importProductsButton,
+              "Імпортовано",
+              "success",
+              1500
+            );
+          } catch (error) {
+            console.error(
+              error
+            );
+
+            showButtonState(
+              importProductsButton,
+              "Помилка",
               "error",
               1500
             );
-
-            importDialogOpened = false;
-
-            return;
+          } finally {
+            importFile.value = "";
           }
+        };
 
-
-          products = normalized;
-
-          saveProductsLocal();
-
-          renderProducts(
-            searchInput?.value || ""
-          );
-
-
-          await syncProductsToSupabase();
-
-
-          showButtonState(
-            importButton,
-            "Імпортовано",
-            "success",
-            1500
-          );
-
-        } catch (error) {
-          console.error(
-            "Import error:",
-            error
-          );
-
-
-          showButtonState(
-            importButton,
-            "Не імпортовано",
-            "error",
-            1500
-          );
-
-          alert(
-            "Не вдалося імпортувати базу.\n\nПеревірте JSON-файл."
-          );
-        }
-
-
-        importFile.value = "";
-        importDialogOpened = false;
-      }
-    );
-  }
+      reader.readAsText(file);
+    }
+  );
 
 
   /* =========================================================
@@ -2559,145 +2377,94 @@ document.addEventListener("DOMContentLoaded", () => {
   ========================================================= */
 
   function parseCalculatorLine(line) {
-    const clean =
-      String(line)
-        .trim()
-        .replace(/\s+/g, " ");
+    const text =
+      String(line || "").trim();
 
-    if (!clean) {
+    if (!text) {
       return null;
     }
 
-
-    /* =======================================================
-       СТАНДАРТНИЙ ФОРМАТ ПРОДУКТУ
-    ======================================================= */
-
-    const productRegex =
-      /^(.+?),\s*для\s*([\d.,]+)\s*(?:грам|г|мл)\s*-\s*([\d.,]+)\s*ккал\s*\/\s*([\d.,]+)\s*білка\s*\/\s*([\d.,]+)\s*жирів\s*\/\s*([\d.,]+)\s*вуглеводів/i;
-
     const productMatch =
-      clean.match(productRegex);
-
-
-    if (productMatch) {
-      const productName =
-        productMatch[1].trim();
-
-      const weight =
-        number(
-          productMatch[2].replace(",", ".")
-        );
-
-      const kcal =
-        number(
-          productMatch[3].replace(",", ".")
-        );
-
-      const protein =
-        number(
-          productMatch[4].replace(",", ".")
-        );
-
-      const fat =
-        number(
-          productMatch[5].replace(",", ".")
-        );
-
-      const carb =
-        number(
-          productMatch[6].replace(",", ".")
-        );
-
-
-      if (
-        productName &&
-        weight > 0
-      ) {
-        return {
-          id: createId("calc"),
-          name: productName,
-          weight,
-          kcal,
-          protein,
-          fat,
-          carb,
-          text: clean,
-          created_at:
-            new Date().toISOString()
-        };
-      }
-    }
-
-
-    /* =======================================================
-       РУЧНЕ ДОДАВАННЯ КАЛОРІЙ
-       
-       Підтримується:
-       
-       +25 ккал
-       +25 калорій
-       25 ккал
-       25 калорій
-       + 25 ккал
-       + 25 калорій
-    ======================================================= */
-
-    const kcalMatch =
-      clean.match(
-        /^[+]?\s*([\d.,]+)\s*(?:ккал|калор(?:і|и|ій|ія|ійність)?)\s*$/i
+      text.match(
+        /^(.+?),\s*для\s*([\d.,]+)\s*грам\s*-\s*([\d.,]+)\s*ккал\s*\/\s*([\d.,]+)\s*білка\s*\/\s*([\d.,]+)\s*жирів\s*\/\s*([\d.,]+)\s*вуглеводів/i
       );
 
+    if (productMatch) {
+      return {
+        id: createId(),
 
-    if (kcalMatch) {
-      const kcal =
-        number(
-          kcalMatch[1].replace(",", ".")
-        );
+        text: text,
 
-      if (kcal >= 0) {
-        return {
-          id: createId("calc"),
-          name: clean,
-          weight: 0,
-          kcal,
-          protein: 0,
-          fat: 0,
-          carb: 0,
-          text: clean,
-          created_at:
-            new Date().toISOString()
-        };
-      }
+        kcal: number(
+          productMatch[3].replace(
+            ",",
+            "."
+          )
+        ),
+
+        protein: number(
+          productMatch[4].replace(
+            ",",
+            "."
+          )
+        ),
+
+        fat: number(
+          productMatch[5].replace(
+            ",",
+            "."
+          )
+        ),
+
+        carb: number(
+          productMatch[6].replace(
+            ",",
+            "."
+          )
+        )
+      };
     }
 
 
-    /* =======================================================
-       БУДЬ-ЯКИЙ ІНШИЙ ТЕКСТ
-       
-       Наприклад:
-       
-       Привіт
-       Тренування
-       Після тренування
-       + соус
-       Будь-який коментар
-       
-       Текст приймається без помилки.
-       КБЖВ такого тексту = 0.
-    ======================================================= */
+    const kcalMatch =
+      text.match(
+        /^\+?\s*([\d.,]+)\s*(?:ккал|калорій|калорії|калорія)\s*$/i
+      );
+
+    if (kcalMatch) {
+      return {
+        id: createId(),
+
+        text,
+
+        kcal: number(
+          kcalMatch[1].replace(
+            ",",
+            "."
+          )
+        ),
+
+        protein: 0,
+
+        fat: 0,
+
+        carb: 0
+      };
+    }
+
 
     return {
-      id: createId("calc"),
-      name: clean,
-      weight: 0,
+      id: createId(),
+
+      text,
+
       kcal: 0,
+
       protein: 0,
+
       fat: 0,
-      carb: 0,
-      text: clean,
-      created_at:
-        new Date().toISOString()
+
+      carb: 0
     };
   }
 
@@ -2706,225 +2473,210 @@ document.addEventListener("DOMContentLoaded", () => {
      CALCULATOR ADD
   ========================================================= */
 
-  if (calcAdd) {
-    calcAdd.addEventListener(
-      "click",
-      () => {
-        const text =
-          calcInput?.value.trim() || "";
+  calcAdd?.addEventListener(
+    "click",
+    () => {
+      const text =
+        calcInput.value.trim();
 
-        /*
-         * Поле повністю порожнє.
-         */
-        if (!text) {
-          showButtonState(
-            calcAdd,
-            "Немає даних",
-            "error",
-            1500
-          );
-
-          return;
-        }
-
-
-        /*
-         * Кожен рядок — окремий запис.
-         */
-        const lines =
-          text
-            .split(/\r?\n/)
-            .map(line => line.trim())
-            .filter(Boolean);
-
-
-        const parsedItems = [];
-
-
-        for (const line of lines) {
-          const parsed =
-            parseCalculatorLine(line);
-
-          if (parsed) {
-            parsedItems.push(parsed);
-          }
-        }
-
-
-        /*
-         * Оскільки parseCalculatorLine приймає
-         * будь-який непорожній текст, сюди
-         * потраплять усі введені рядки.
-         */
-        if (parsedItems.length === 0) {
-          showButtonState(
-            calcAdd,
-            "Немає даних",
-            "error",
-            1500
-          );
-
-          return;
-        }
-
-
-        calculatorItems.push(
-          ...parsedItems
-        );
-
-        saveCalculatorLocal();
-
-        renderCalculatorLog();
-
-        updateTotals();
-
-
-        /*
-         * Після додавання очищаємо поле,
-         * щоб наступне введення було новим.
-         */
-        calcInput.value = "";
-
-
+      if (!text) {
         showButtonState(
           calcAdd,
-          "Додано",
-          "success",
-          1500
+          "Немає тексту",
+          "error",
+          1200
         );
+
+        return;
       }
-    );
-  }
 
+      const lines =
+        text
+          .split(/\r?\n/)
+          .map(line =>
+            line.trim()
+          )
+          .filter(Boolean);
 
-  /* =========================================================
-     CALCULATOR CLEAR TEXT
-  ========================================================= */
+      const parsedItems =
+        lines
+          .map(parseCalculatorLine)
+          .filter(Boolean);
 
-  if (calcClearText) {
-    calcClearText.addEventListener(
-      "click",
-      () => {
-        const hasText =
-          Boolean(
-            calcInput?.value.trim()
-          );
-
-        if (!hasText) {
-          showButtonState(
-            calcClearText,
-            "Немає даних",
-            "error",
-            1500
-          );
-
-          return;
-        }
-
-
-        calcInput.value = "";
-
+      if (!parsedItems.length) {
         showButtonState(
-          calcClearText,
-          "Очищено",
-          "success",
-          1500
+          calcAdd,
+          "Помилка",
+          "error",
+          1200
         );
+
+        return;
       }
-    );
-  }
+
+      calculatorItems.push(
+        ...parsedItems
+      );
+
+      saveCalculatorLocal();
+
+      renderCalculator();
+
+      // Текст успішно доданий.
+      // Тому чернетку тепер можна видалити.
+      calcInput.value = "";
+
+      clearCalculatorDraft();
+
+      showButtonState(
+        calcAdd,
+        "Додано",
+        "success",
+        1200
+      );
+    }
+  );
 
 
   /* =========================================================
-     CALCULATOR CLEAR BLOCKS
+     CALCULATOR DRAFT AUTOSAVE
   ========================================================= */
 
-  if (calcClearBlocks) {
-    calcClearBlocks.addEventListener(
-      "click",
-      () => {
-        if (
-          calculatorItems.length === 0
-        ) {
-          showButtonState(
-            calcClearBlocks,
-            "Немає даних",
-            "error",
-            1500
-          );
-
-          return;
-        }
+  calcInput?.addEventListener(
+    "input",
+    () => {
+      saveCalculatorDraft();
+    }
+  );
 
 
-        const confirmed =
-          confirm(
-            "Очистити всю історію калькулятора?"
-          );
+  /* =========================================================
+     CLEAR CALCULATOR TEXT
+  ========================================================= */
+
+  calcClearText?.addEventListener(
+    "click",
+    () => {
+      const confirmed =
+        confirm(
+          "Очистити текст у полі калькулятора?"
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      calcInput.value = "";
+
+      clearCalculatorDraft();
+
+      showButtonState(
+        calcClearText,
+        "Очищено",
+        "error",
+        1200
+      );
+    }
+  );
 
 
-        if (!confirmed) {
-          showButtonState(
-            calcClearBlocks,
-            "Не очищено",
-            "error",
-            1500
-          );
+  /* =========================================================
+     CLEAR CALCULATOR BLOCKS
+  ========================================================= */
 
-          return;
-        }
-
-
-        calculatorItems = [];
-
-        saveCalculatorLocal();
-
-        renderCalculatorLog();
-
-        updateTotals();
-
-
+  calcClearBlocks?.addEventListener(
+    "click",
+    () => {
+      if (!calculatorItems.length) {
         showButtonState(
           calcClearBlocks,
-          "Очищено",
-          "success",
-          1500
+          "Вже порожньо",
+          "error",
+          1200
         );
+
+        return;
       }
-    );
-  }
+
+      const confirmed =
+        confirm(
+          "Очистити всі блоки денного підсумку?"
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      calculatorItems = [];
+
+      saveCalculatorLocal();
+
+      renderCalculator();
+
+      showButtonState(
+        calcClearBlocks,
+        "Очищено",
+        "error",
+        1200
+      );
+    }
+  );
 
 
   /* =========================================================
      CALCULATOR TOTALS
   ========================================================= */
 
-  function updateTotals() {
-    let kcal = 0;
-    let protein = 0;
-    let fat = 0;
-    let carb = 0;
+  function getTotals() {
+    return calculatorItems.reduce(
+      (total, item) => {
+        total.kcal +=
+          number(item.kcal);
+
+        total.protein +=
+          number(item.protein);
+
+        total.fat +=
+          number(item.fat);
+
+        total.carb +=
+          number(item.carb);
+
+        return total;
+      },
+      {
+        kcal: 0,
+        protein: 0,
+        fat: 0,
+        carb: 0
+      }
+    );
+  }
 
 
-    calculatorItems.forEach(item => {
-      kcal += number(item.kcal);
-      protein += number(item.protein);
-      fat += number(item.fat);
-      carb += number(item.carb);
-    });
-
+  function renderTotals() {
+    const totals =
+      getTotals();
 
     kcalElement.textContent =
-      formatNumber(kcal);
+      formatNumber(
+        totals.kcal
+      );
 
     proteinElement.textContent =
-      formatNumber(protein);
+      formatNumber(
+        totals.protein
+      );
 
     fatElement.textContent =
-      formatNumber(fat);
+      formatNumber(
+        totals.fat
+      );
 
     carbElement.textContent =
-      formatNumber(carb);
+      formatNumber(
+        totals.carb
+      );
   }
 
 
@@ -2933,54 +2685,42 @@ document.addEventListener("DOMContentLoaded", () => {
   ========================================================= */
 
   function renderCalculatorLog() {
-    if (!calcLog) {
-      return;
-    }
+    if (!calcLog) return;
 
     calcLog.innerHTML = "";
 
-
-    if (
-      calculatorItems.length === 0
-    ) {
-      calcLog.innerHTML = `
-        <div style="padding:10px 0;">
-          Історія порожня.
-        </div>
-      `;
-
-      return;
-    }
-
-
     calculatorItems.forEach(
       (item, index) => {
-        const row =
-          document.createElement("div");
+        const logItem =
+          document.createElement(
+            "div"
+          );
 
-        row.className =
+        logItem.className =
           "log-item";
 
+        logItem.innerHTML = `
+          <span>
+            ${escapeHTML(
+              item.text
+            )}
+          </span>
 
-        const text =
-          document.createElement("span");
+          <button
+            type="button"
+            class="remove"
+            data-index="${index}"
+          >
+            Видалити
+          </button>
+        `;
 
-        text.textContent =
-          item.text ||
-          `${item.name}, для ${formatNumber(item.weight)} грам - ${formatNumber(item.kcal)} ккал / ${formatNumber(item.protein)} білка / ${formatNumber(item.fat)} жирів / ${formatNumber(item.carb)} вуглеводів`;
+        const removeButton =
+          logItem.querySelector(
+            ".remove"
+          );
 
-
-        const remove =
-          document.createElement("button");
-
-        remove.className =
-          "remove";
-
-        remove.textContent =
-          "Видалити";
-
-
-        remove.addEventListener(
+        removeButton.addEventListener(
           "click",
           () => {
             calculatorItems.splice(
@@ -2990,19 +2730,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
             saveCalculatorLocal();
 
-            renderCalculatorLog();
-
-            updateTotals();
+            renderCalculator();
           }
         );
 
-
-        row.appendChild(text);
-        row.appendChild(remove);
-
-        calcLog.appendChild(row);
+        calcLog.appendChild(
+          logItem
+        );
       }
     );
+  }
+
+
+  function renderCalculator() {
+    renderTotals();
+
+    renderCalculatorLog();
+  }
+
+
+  /* =========================================================
+     TOTAL SUMMARY
+  ========================================================= */
+
+  function getTotalSummary() {
+    const totals =
+      getTotals();
+
+    return `Денний підсумок: ${formatNumber(totals.kcal)} ккал / ${formatNumber(totals.protein)} білка / ${formatNumber(totals.fat)} жирів / ${formatNumber(totals.carb)} вуглеводів`;
   }
 
 
@@ -3010,472 +2765,413 @@ document.addEventListener("DOMContentLoaded", () => {
      COPY TOTAL
   ========================================================= */
 
-  function getTotalSummary() {
-    return `Денний підсумок: ${formatNumber(number(kcalElement.textContent))} ккал / ${formatNumber(number(proteinElement.textContent))} білка / ${formatNumber(number(fatElement.textContent))} жирів / ${formatNumber(number(carbElement.textContent))} вуглеводів`;
-  }
-
-
-  if (copyTotal) {
-    copyTotal.addEventListener(
-      "click",
-      async () => {
-        const text =
-          getTotalSummary();
-
-        const success =
-          await copyText(text);
-
-        if (success) {
-          showButtonState(
-            copyTotal,
-            "Скопійовано",
-            "success",
-            1500
-          );
-        }
-      }
-    );
-  }
-
-
-  /* =========================================================
-     ARCHIVE
-  ========================================================= */
-
-  function createArchiveItem() {
-    return {
-      id: createId("archive"),
-      date: getCurrentDate(),
-      text: getTotalSummary(),
-      created_at:
-        new Date().toISOString()
-    };
-  }
-
-
-  function getCurrentDate() {
-    const now =
-      new Date();
-
-    const year =
-      now.getFullYear();
-
-    const month =
-      String(
-        now.getMonth() + 1
-      ).padStart(2, "0");
-
-    const day =
-      String(
-        now.getDate()
-      ).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-  }
-
-
-  /* =========================================================
-     SAVE TO ARCHIVE
-  ========================================================= */
-
-  if (saveArchive) {
-    saveArchive.addEventListener(
-      "click",
-      () => {
-        if (
-          calculatorItems.length === 0
-        ) {
-          alert(
-            "Немає даних для збереження в архів."
-          );
-
-          return;
-        }
-
-
-        const archiveItem =
-          createArchiveItem();
-
-        archiveItems.unshift(
-          archiveItem
+  copyTotal?.addEventListener(
+    "click",
+    async () => {
+      if (!calculatorItems.length) {
+        showButtonState(
+          copyTotal,
+          "Немає даних",
+          "error",
+          1200
         );
 
-        saveArchiveLocal();
+        return;
+      }
 
-        renderArchive();
+      const success =
+        await copyText(
+          getTotalSummary()
+        );
+
+      if (success) {
+        showButtonState(
+          copyTotal,
+          "Скопійовано",
+          "success",
+          1200
+        );
+      } else {
+        showButtonState(
+          copyTotal,
+          "Помилка",
+          "error",
+          1200
+        );
+      }
+    }
+  );
 
 
+  /* =========================================================
+     SAVE ARCHIVE
+  ========================================================= */
+
+  saveArchive?.addEventListener(
+    "click",
+    () => {
+      if (!calculatorItems.length) {
         showButtonState(
           saveArchive,
-          "Збережено",
-          "success",
-          1500
+          "Немає даних",
+          "error",
+          1200
         );
+
+        return;
+      }
+
+      const now =
+        new Date();
+
+      const item = {
+        id: createId(),
+
+        date:
+          now.toISOString(),
+
+        text:
+          getTotalSummary(),
+
+        created_at:
+          now.toISOString()
+      };
+
+      archiveItems.unshift(
+        item
+      );
+
+      saveArchiveLocal();
+
+      renderArchive();
+
+      showButtonState(
+        saveArchive,
+        "Збережено",
+        "success",
+        1200
+      );
+    }
+  );
+
+
+  /* =========================================================
+     ARCHIVE RENDER
+  ========================================================= */
+
+  function formatArchiveDate(dateValue) {
+    const date =
+      new Date(dateValue);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return String(
+        dateValue || ""
+      );
+    }
+
+    return date.toLocaleString(
+      "uk-UA",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
       }
     );
   }
 
 
-  /* =========================================================
-     RENDER ARCHIVE
-  ========================================================= */
-
   function renderArchive() {
-    if (!archiveLog) {
-      return;
-    }
+    if (!archiveLog) return;
 
     archiveLog.innerHTML = "";
 
-
-    if (
-      archiveItems.length === 0
-    ) {
+    if (!archiveItems.length) {
       archiveLog.innerHTML = `
-        <div style="padding:10px 0;">
-          Архів порожній.
+        <div class="log-item">
+          <span>
+            Архів порожній
+          </span>
         </div>
       `;
 
       return;
     }
 
+    archiveItems.forEach(
+      item => {
+        const wrapper =
+          document.createElement(
+            "div"
+          );
 
-    archiveItems.forEach(item => {
-      const row =
-        document.createElement("div");
+        wrapper.className =
+          "log-item archive-item";
 
-      row.className =
-        "log-item archive-item";
+        wrapper.innerHTML = `
+          <div class="archive-content">
 
+            <div>
+              <strong>
+                ${escapeHTML(
+                  formatArchiveDate(
+                    item.date
+                  )
+                )}
+              </strong>
+            </div>
 
-      const content =
-        document.createElement("div");
+            <div>
+              ${escapeHTML(
+                item.text
+              )}
+            </div>
 
-      content.className =
-        "archive-content";
+          </div>
 
+          <div class="archive-actions">
 
-      const date =
-        document.createElement("div");
+            <button
+              type="button"
+              class="edit-date"
+            >
+              Дата
+            </button>
 
-      date.style.fontWeight =
-        "600";
+            <button
+              type="button"
+              class="edit-text"
+            >
+              Текст
+            </button>
 
-      date.style.color =
-        "var(--text-main)";
+            <button
+              type="button"
+              class="remove"
+            >
+              Видалити
+            </button>
 
-      date.textContent =
-        formatArchiveDate(
-          item.date
+          </div>
+        `;
+
+        const editDate =
+          wrapper.querySelector(
+            ".edit-date"
+          );
+
+        const editText =
+          wrapper.querySelector(
+            ".edit-text"
+          );
+
+        const removeButton =
+          wrapper.querySelector(
+            ".remove"
+          );
+
+        editDate.addEventListener(
+          "click",
+          () => {
+            editArchiveDate(
+              item,
+              wrapper,
+              editDate
+            );
+          }
         );
 
-
-      const text =
-        document.createElement("div");
-
-      text.textContent =
-        item.text;
-
-
-      content.appendChild(date);
-      content.appendChild(text);
-
-
-      const actions =
-        document.createElement("div");
-
-      actions.className =
-        "archive-actions";
-
-
-      const editDate =
-        document.createElement("button");
-
-      editDate.className =
-        "edit-date";
-
-      editDate.textContent =
-        "Дата";
-
-
-      const editText =
-        document.createElement("button");
-
-      editText.className =
-        "edit-text";
-
-      editText.textContent =
-        "Текст";
-
-
-      const remove =
-        document.createElement("button");
-
-      remove.className =
-        "remove";
-
-      remove.textContent =
-        "Видалити";
-
-
-      editDate.addEventListener(
-        "click",
-        () => {
-          editArchiveDate(
-            item,
-            date,
-            editDate
-          );
-        }
-      );
-
-
-      editText.addEventListener(
-        "click",
-        () => {
-          openArchiveTextModal(
-            item,
-            editText
-          );
-        }
-      );
-
-
-      remove.addEventListener(
-        "click",
-        () => {
-          const confirmed =
-            confirm(
-              "Видалити цей запис з архіву?"
+        editText.addEventListener(
+          "click",
+          () => {
+            openArchiveTextModal(
+              item,
+              editText
             );
-
-          if (!confirmed) {
-            return;
           }
+        );
 
-          archiveItems =
-            archiveItems.filter(
-              archive =>
-                archive.id !==
-                item.id
-            );
+        removeButton.addEventListener(
+          "click",
+          () => {
+            const confirmed =
+              confirm(
+                "Видалити цей запис з архіву?"
+              );
 
-          saveArchiveLocal();
+            if (!confirmed) {
+              return;
+            }
 
-          renderArchive();
-        }
-      );
+            archiveItems =
+              archiveItems.filter(
+                archiveItem =>
+                  archiveItem.id !==
+                  item.id
+              );
 
+            saveArchiveLocal();
 
-      actions.appendChild(editDate);
-      actions.appendChild(editText);
-      actions.appendChild(remove);
+            renderArchive();
+          }
+        );
 
-
-      row.appendChild(content);
-      row.appendChild(actions);
-
-      archiveLog.appendChild(row);
-    });
+        archiveLog.appendChild(
+          wrapper
+        );
+      }
+    );
   }
 
 
   /* =========================================================
-     FORMAT ARCHIVE DATE
-  ========================================================= */
-
-  function formatArchiveDate(value) {
-    if (!value) {
-      return "";
-    }
-
-    const match =
-      String(value).match(
-        /^(\d{4})-(\d{2})-(\d{2})$/
-      );
-
-    if (!match) {
-      return value;
-    }
-
-    return `${match[3]}.${match[2]}.${match[1]}`;
-  }
-
-
-  /* =========================================================
-     EDIT ARCHIVE DATE
+     ARCHIVE DATE EDIT
   ========================================================= */
 
   function editArchiveDate(
     item,
-    dateElement,
+    wrapper,
     button
   ) {
     if (
-      dateElement.querySelector(
+      wrapper.querySelector(
         ".archive-date-input"
       )
     ) {
       return;
     }
 
+    const content =
+      wrapper.querySelector(
+        ".archive-content"
+      );
 
-    const originalDate =
-      item.date || "";
-
+    const oldDate =
+      formatArchiveDate(
+        item.date
+      );
 
     const input =
-      document.createElement("input");
+      document.createElement(
+        "input"
+      );
 
-    input.type = "date";
+    input.type =
+      "datetime-local";
 
     input.className =
       "archive-date-input";
 
-    input.value =
-      originalDate || getCurrentDate();
+    const date =
+      new Date(item.date);
 
+    if (
+      !Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      const local =
+        new Date(
+          date.getTime() -
+            date.getTimezoneOffset() *
+              60000
+        )
+          .toISOString()
+          .slice(0, 16);
 
-    dateElement.textContent = "";
+      input.value =
+        local;
+    }
 
-    dateElement.appendChild(input);
+    const original =
+      content.innerHTML;
 
-    input.focus();
+    content.innerHTML = "";
 
+    content.appendChild(
+      input
+    );
 
-    let finished = false;
+    button.textContent =
+      "Зберегти";
 
+    button.classList.add(
+      "date-success"
+    );
 
-    const finish = () => {
-      if (finished) {
-        return;
-      }
+    const cancel =
+      document.createElement(
+        "button"
+      );
 
-      finished = true;
+    cancel.type =
+      "button";
 
+    cancel.className =
+      "edit-text";
 
-      const newDate =
-        input.value || "";
+    cancel.textContent =
+      "Скасувати";
 
+    const actions =
+      wrapper.querySelector(
+        ".archive-actions"
+      );
 
-      if (
-        newDate &&
-        newDate !== originalDate
-      ) {
+    actions.insertBefore(
+      cancel,
+      button
+    );
+
+    const save =
+      () => {
+        if (!input.value) {
+          return;
+        }
+
+        const newDate =
+          new Date(
+            input.value
+          );
+
+        if (
+          Number.isNaN(
+            newDate.getTime()
+          )
+        ) {
+          return;
+        }
+
         item.date =
-          newDate;
+          newDate.toISOString();
 
         saveArchiveLocal();
 
         renderArchive();
+      };
 
+    button.onclick =
+      save;
 
-        const newButton =
-          findArchiveActionButton(
-            item.id,
-            "edit-date"
-          );
+    cancel.onclick =
+      () => {
+        content.innerHTML =
+          original;
 
-        showButtonState(
-          newButton,
-          "Змінено",
-          "success",
-          1500
-        );
+        renderArchive();
+      };
 
-        return;
-      }
-
-
-      renderArchive();
-
-      const newButton =
-        findArchiveActionButton(
-          item.id,
-          "edit-date"
-        );
-
-      showButtonState(
-        newButton,
-        "Не змінено",
-        "error",
-        1500
-      );
-    };
-
-
-    input.addEventListener(
-      "change",
-      finish,
-      {
-        once: true
-      }
-    );
-
-    input.addEventListener(
-      "blur",
-      finish,
-      {
-        once: true
-      }
-    );
+    input.focus();
   }
 
 
   /* =========================================================
-     FIND ARCHIVE ACTION BUTTON
-  ========================================================= */
-
-  function findArchiveActionButton(
-    itemId,
-    className
-  ) {
-    if (!archiveLog) {
-      return null;
-    }
-
-    const rows =
-      archiveLog.querySelectorAll(
-        ".archive-item"
-      );
-
-    for (const row of rows) {
-      const item =
-        archiveItems.find(
-          archive =>
-            archive.id === itemId
-        );
-
-      if (!item) {
-        continue;
-      }
-
-      if (
-        className === "edit-date" &&
-        row.querySelector(".edit-date")
-      ) {
-        return row.querySelector(
-          ".edit-date"
-        );
-      }
-
-      if (
-        className === "edit-text" &&
-        row.querySelector(".edit-text")
-      ) {
-        return row.querySelector(
-          ".edit-text"
-        );
-      }
-    }
-
-    return null;
-  }
-
-
-  /* =========================================================
-     EDIT ARCHIVE TEXT MODAL
+     ARCHIVE TEXT MODAL
   ========================================================= */
 
   function openArchiveTextModal(
@@ -3485,34 +3181,42 @@ document.addEventListener("DOMContentLoaded", () => {
     archiveEditingId =
       item.id;
 
-    archiveOriginalText =
-      item.text || "";
+    archiveOriginalDate =
+      item.date;
 
-    archiveTextInput._archiveButton =
-      button;
+    archiveOriginalText =
+      item.text;
 
     archiveTextInput.value =
-      item.text || "";
+      item.text;
 
     archiveTextModal.classList.add(
       "active"
     );
 
+    clearButtonStatus(
+      archiveTextSave
+    );
+
+    clearButtonStatus(
+      archiveTextCancel
+    );
+
     setTimeout(() => {
       archiveTextInput.focus();
-      archiveTextInput.select();
-    }, 50);
+    }, 0);
   }
 
 
   function closeArchiveTextModal() {
-    archiveEditingId = null;
-    archiveOriginalText = null;
+    archiveEditingId =
+      null;
 
-    if (archiveTextInput) {
-      archiveTextInput._archiveButton =
-        null;
-    }
+    archiveOriginalDate =
+      null;
+
+    archiveOriginalText =
+      null;
 
     archiveTextModal.classList.remove(
       "active"
@@ -3520,268 +3224,177 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-  if (archiveTextCancel) {
-    archiveTextCancel.addEventListener(
-      "click",
-      () => {
-        const button =
-          archiveTextInput?._archiveButton;
+  archiveTextCancel?.addEventListener(
+    "click",
+    () => {
+      showButtonState(
+        archiveTextCancel,
+        "Скасовано",
+        "error",
+        900
+      );
 
+      setTimeout(() => {
         closeArchiveTextModal();
-
-        if (button) {
-          showButtonState(
-            button,
-            "Не змінено",
-            "error",
-            1500
-          );
-        }
-      }
-    );
-  }
+      }, 350);
+    }
+  );
 
 
-  if (archiveTextModal) {
-    archiveTextModal.addEventListener(
-      "click",
-      event => {
-        if (
-          event.target ===
-          archiveTextModal
-        ) {
-          const button =
-            archiveTextInput?._archiveButton;
-
-          closeArchiveTextModal();
-
-          if (button) {
-            showButtonState(
-              button,
-              "Не змінено",
-              "error",
-              1500
-            );
-          }
-        }
-      }
-    );
-  }
-
-
-  if (archiveTextSave) {
-    archiveTextSave.addEventListener(
-      "click",
-      () => {
-        if (!archiveEditingId) {
-          return;
-        }
-
-
-        const item =
-          archiveItems.find(
-            archive =>
-              archive.id ===
-              archiveEditingId
-          );
-
-
-        if (!item) {
-          closeArchiveTextModal();
-
-          return;
-        }
-
-
-        const button =
-          archiveTextInput?._archiveButton;
-
-
-        const text =
-          archiveTextInput.value.trim();
-
-
-        if (!text) {
-          archiveTextInput.focus();
-
-          return;
-        }
-
-
-        const changed =
-          text !==
-          archiveOriginalText;
-
-
-        if (changed) {
-          item.text = text;
-
-          saveArchiveLocal();
-
-          closeArchiveTextModal();
-
-          renderArchive();
-
-          const newButton =
-            findArchiveActionButton(
-              item.id,
-              "edit-text"
-            );
-
-          showButtonState(
-            newButton || button,
-            "Змінено",
-            "success",
-            1500
-          );
-
-          return;
-        }
-
-
-        closeArchiveTextModal();
-
-        showButtonState(
-          button,
-          "Не змінено",
-          "error",
-          1500
-        );
-      }
-    );
-  }
-
-
-  /* =========================================================
-     ESCAPE CLOSE MODALS
-  ========================================================= */
-
-  document.addEventListener(
-    "keydown",
-    event => {
-      if (event.key !== "Escape") {
+  archiveTextSave?.addEventListener(
+    "click",
+    () => {
+      if (!archiveEditingId) {
         return;
       }
 
-
-      if (
-        addProductModal?.classList.contains(
-          "active"
-        )
-      ) {
-        addProductModal.classList.remove(
-          "active"
+      const item =
+        archiveItems.find(
+          archiveItem =>
+            archiveItem.id ===
+            archiveEditingId
         );
 
-        showButtonState(
-          addProductSave,
-          "Скасовано",
-          "error",
-          1500
-        );
-
-        showButtonState(
-          addProductButton,
-          "Продукт не додано",
-          "error",
-          1500
-        );
+      if (!item) {
+        closeArchiveTextModal();
+        return;
       }
 
+      const newText =
+        archiveTextInput.value.trim();
 
-      if (
-        deleteProductModal?.classList.contains(
-          "active"
-        )
-      ) {
-        deleteProductModal.classList.remove(
-          "active"
-        );
-
+      if (!newText) {
         showButtonState(
-          deleteProductButton,
-          "Скасовано",
+          archiveTextSave,
+          "Порожній текст",
           "error",
-          1500
+          1200
         );
+
+        return;
       }
 
+      item.text =
+        newText;
 
+      saveArchiveLocal();
+
+      renderArchive();
+
+      showButtonState(
+        archiveTextSave,
+        "Збережено",
+        "success",
+        1000
+      );
+
+      setTimeout(() => {
+        closeArchiveTextModal();
+      }, 300);
+    }
+  );
+
+
+  archiveTextModal?.addEventListener(
+    "click",
+    event => {
       if (
-        productModal?.classList.contains(
-          "active"
-        )
+        event.target ===
+        archiveTextModal
       ) {
-        productModal.classList.remove(
-          "active"
-        );
-
-        showButtonState(
-          productCancel,
-          "Скасовано",
-          "error",
-          1500
-        );
+        closeArchiveTextModal();
       }
-
-
-      if (
-        archiveTextModal?.classList.contains(
-          "active"
-        )
-      ) {
-        const button =
-          archiveTextInput?._archiveButton;
-
-        archiveTextModal.classList.remove(
-          "active"
-        );
-
-        archiveEditingId = null;
-        archiveOriginalText = null;
-
-        if (archiveTextInput) {
-          archiveTextInput._archiveButton =
-            null;
-        }
-
-        showButtonState(
-          button,
-          "Не змінено",
-          "error",
-          1500
-        );
-      }
-
-
-      selectedProduct = null;
-      archiveEditingId = null;
     }
   );
 
 
   /* =========================================================
-     ENTER IN PRODUCT WEIGHT
+     TABS
   ========================================================= */
 
-  if (productWeight) {
-    productWeight.addEventListener(
-      "keydown",
-      event => {
-        if (
-          event.key === "Enter"
-        ) {
-          event.preventDefault();
+  tabs.forEach(tab => {
+    tab.addEventListener(
+      "click",
+      () => {
+        const tabName =
+          tab.dataset.tab;
 
-          productCopy?.click();
-        }
+        setActiveTab(
+          tabName
+        );
       }
     );
-  }
+  });
 
 
   /* =========================================================
-     ENTER IN ADD PRODUCT FORM
+     ESCAPE — CLOSE MODALS
+  ========================================================= */
+
+  document.addEventListener(
+    "keydown",
+    event => {
+      if (
+        event.key !== "Escape"
+      ) {
+        return;
+      }
+
+      if (
+        productModal.classList.contains(
+          "active"
+        )
+      ) {
+        closeProductModal();
+      }
+
+      if (
+        addProductModal.classList.contains(
+          "active"
+        )
+      ) {
+        closeAddProductModal();
+      }
+
+      if (
+        deleteProductModal.classList.contains(
+          "active"
+        )
+      ) {
+        closeDeleteProductModal();
+      }
+
+      if (
+        archiveTextModal.classList.contains(
+          "active"
+        )
+      ) {
+        closeArchiveTextModal();
+      }
+    }
+  );
+
+
+  /* =========================================================
+     ENTER — PRODUCT WEIGHT
+  ========================================================= */
+
+  productWeight?.addEventListener(
+    "keydown",
+    event => {
+      if (
+        event.key === "Enter"
+      ) {
+        event.preventDefault();
+
+        productCopy?.click();
+      }
+    }
+  );
+
+
+  /* =========================================================
+     ENTER — ADD PRODUCT
   ========================================================= */
 
   [
@@ -3807,7 +3420,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   /* =========================================================
-     INITIALIZATION
+     INITIAL LOAD
   ========================================================= */
 
   calculatorItems =
@@ -3816,50 +3429,64 @@ document.addEventListener("DOMContentLoaded", () => {
   archiveItems =
     loadArchiveLocal();
 
+  // Відновлюємо незавершений текст
+  // калькулятора ДО відображення сторінки.
+  loadCalculatorDraft();
 
-  renderCalculatorLog();
-  updateTotals();
+  // Відновлюємо пошук.
+  loadSearchQuery();
+
+  // Відновлюємо активну вкладку.
+  const savedTab =
+    loadActiveTab();
+
+  setActiveTab(
+    savedTab
+  );
+
+  // Показуємо збережені дані
+  // калькулятора та архіву.
+  renderCalculator();
+
   renderArchive();
 
-
+  // Завантажуємо продукти.
   initializeProducts();
 
 
   /* =========================================================
-     SUPABASE AUTH STATE
+     SUPABASE AUTH LISTENER
   ========================================================= */
 
-  if (supabaseClient) {
+  if (
+    supabaseClient
+  ) {
     supabaseClient.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log(
-          "Supabase auth event:",
-          event
-        );
-
+      async (
+        event,
+        session
+      ) => {
         if (
-          event === "SIGNED_IN" &&
-          session?.user
+          event ===
+          "SIGNED_IN"
         ) {
-          const cloudProducts =
+          const remoteProducts =
             await loadProductsFromSupabase();
 
           if (
-            Array.isArray(
-              cloudProducts
-            ) &&
-            cloudProducts.length > 0
+            remoteProducts.length
           ) {
             products =
               mergeProducts(
                 products,
-                cloudProducts
+                remoteProducts
               );
 
             saveProductsLocal();
 
             renderProducts(
-              searchInput?.value || ""
+              searchInput?.value ||
+                ""
             );
           }
 
