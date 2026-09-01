@@ -57,15 +57,15 @@ document.addEventListener("DOMContentLoaded", () => {
         0 0 18px rgba(239, 68, 68, 0.35) !important;
     }
 
-    .button-status-info {
-      background: #3b82f6 !important;
-      background-color: #3b82f6 !important;
-      border-color: #3b82f6 !important;
-      color: #ffffff !important;
-      box-shadow:
-        0 0 0 1px rgba(59, 130, 246, 0.35),
-        0 0 18px rgba(59, 130, 246, 0.35) !important;
-    }
+.button-status-info {
+  background: #7289da !important;
+  background-color: #7289da !important;
+  border-color: #7289da !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 0 0 1px rgba(114, 137, 218, 0.35),
+    0 0 18px rgba(114, 137, 218, 0.35) !important;
+}
 
     .button-status-success,
     .button-status-error,
