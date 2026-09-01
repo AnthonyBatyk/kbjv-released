@@ -275,8 +275,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const deleteProductList =
     document.getElementById("delete-product-list");
 
-  const deleteProductCancel =
-    document.getElementById("delete-product-cancel");
+  const deleteProductCancelTop =
+    document.getElementById("delete-product-cancel-top");
+
+  const deleteProductCancelBottom =
+    document.getElementById("delete-product-cancel-bottom");
 
   const calcInput =
     document.getElementById("calc-input");
@@ -1975,8 +1978,24 @@ document.addEventListener("DOMContentLoaded", () => {
      DELETE PRODUCT CANCEL
   ========================================================= */
 
-  if (deleteProductCancel) {
-    deleteProductCancel.addEventListener(
+  if (deleteProductCancelTop) {
+    deleteProductCancelTop.addEventListener(
+      "click",
+      () => {
+        closeDeleteProductModal();
+
+        showButtonState(
+          deleteProductButton,
+          "Продукт не видалено",
+          "error",
+          1500
+        );
+      }
+    );
+  }
+
+  if (deleteProductCancelBottom) {
+    deleteProductCancelBottom.addEventListener(
       "click",
       () => {
         closeDeleteProductModal();
