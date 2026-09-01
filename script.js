@@ -1457,23 +1457,31 @@ document.addEventListener("DOMContentLoaded", () => {
      SEARCH
   ========================================================= */
 
-  if (searchInput) {
-    searchInput.addEventListener(
-      "input",
-      () => {
-        renderProducts(
-          searchInput.value
-        );
+if (searchInput) {
+  searchInput.addEventListener(
+    "input",
+    () => {
+      const scrollPosition =
+        window.scrollY;
 
-        if (clearSearch) {
-          clearSearch.style.display =
-            searchInput.value
-              ? "block"
-              : "none";
-        }
+      renderProducts(
+        searchInput.value
+      );
+
+      if (clearSearch) {
+        clearSearch.style.display =
+          searchInput.value
+            ? "block"
+            : "none";
       }
-    );
-  }
+
+      window.scrollTo(
+        0,
+        scrollPosition
+      );
+    }
+  );
+}
 
 
   if (clearSearch) {
