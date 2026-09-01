@@ -1303,17 +1303,20 @@ button.copied {
 
 
 /* ================================================= */
-/*             DELETE PRODUCT MODAL                   */
+/*             DELETE PRODUCT MODAL                  */
 /* ================================================= */
 
 .delete-product-modal-box {
     max-width: 480px;
-
     max-height: calc(100vh - 40px);
-
     overflow-y: auto;
+    padding-bottom: 20px;
 }
 
+.delete-product-modal-box .product-modal-actions {
+    margin-top: 18px;
+    margin-bottom: 18px;
+}
 
 /* ================================================= */
 /*             DELETE PRODUCT LIST                    */
