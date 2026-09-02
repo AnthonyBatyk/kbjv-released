@@ -2471,13 +2471,12 @@ document.addEventListener("DOMContentLoaded", () => {
   if (exportButton) {
     exportButton.addEventListener(
       "click",
-      () => {
+      async () => {
 
         const confirmed =
           confirm(
             `Експортувати базу продуктів?\n\nБуде експортовано ${products.length} продуктів.`
           );
-
 
         if (!confirmed) {
           showButtonState(
@@ -2489,7 +2488,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
           return;
         }
-
 
         const exportData = {
           version: 1,
@@ -2504,7 +2502,6 @@ document.addEventListener("DOMContentLoaded", () => {
             )
         };
 
-
         const json =
           JSON.stringify(
             exportData,
@@ -2512,7 +2509,89 @@ document.addEventListener("DOMContentLoaded", () => {
             2
           );
 
+        const date =
+          new Date()
+            .toISOString()
+            .slice(0, 10);
 
+        const fileName =
+          `kbjv-database-${date}.json`;
+
+        /*
+         * iPhone / iPad:
+         * передаємо JSON-файл у системне меню
+         * "Поділитися", звідки можна вибрати
+         * "Зберегти у Файли".
+         */
+        try {
+
+          if (
+            navigator.share &&
+            navigator.canShare
+          ) {
+
+            const file =
+              new File(
+                [json],
+                fileName,
+                {
+                  type:
+                    "application/json"
+                }
+              );
+
+            const shareData = {
+              files: [file]
+            };
+
+            if (
+              navigator.canShare(
+                shareData
+              )
+            ) {
+
+              await navigator.share(
+                shareData
+              );
+
+              showButtonState(
+                exportButton,
+                "Експортовано",
+                "success",
+                1800
+              );
+
+              return;
+            }
+          }
+
+        } catch (error) {
+
+          if (
+            error?.name ===
+            "AbortError"
+          ) {
+            showButtonState(
+              exportButton,
+              "Не експортовано",
+              "error",
+              1800
+            );
+
+            return;
+          }
+
+          console.error(
+            "Share error:",
+            error
+          );
+        }
+
+        /*
+         * Комп'ютер та браузери без
+         * підтримки системного меню:
+         * звичайне завантаження.
+         */
         const blob =
           new Blob(
             [json],
@@ -2522,28 +2601,18 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           );
 
-
         const url =
           URL.createObjectURL(
             blob
           );
-
 
         const link =
           document.createElement("a");
 
         link.href = url;
 
-
-        const date =
-          new Date()
-            .toISOString()
-            .slice(0, 10);
-
-
         link.download =
-          `kbjv-database-${date}.json`;
-
+          fileName;
 
         document.body.appendChild(
           link
@@ -2553,8 +2622,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         link.remove();
 
-        URL.revokeObjectURL(url);
-
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+        }, 1000);
 
         showButtonState(
           exportButton,
